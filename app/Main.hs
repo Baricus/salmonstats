@@ -15,7 +15,7 @@ import Text.Read (readMaybe)
 import Options.Applicative
 
 import Salmon
-import Data.Either (lefts, rights)
+import Data.Either (rights)
 import Data.Maybe (fromMaybe)
 
 
@@ -46,12 +46,12 @@ argParser = info (helper <*> opts)
 
 
 printBosses :: Set Boss -> Round -> IO ()
-printBosses bs CR{bosses=bm} = 
-    let relBosses = M.restrictKeys bm bs
-        printBossStats (BS k tk s) = T.putStr . (<> ",\t") . T.intercalate ",\t" . fmap (T.pack . show) $ [k, tk, s]
+printBosses bset CR{bosses=bmap} = 
+    let printBossStats (BS k tk s) = T.putStr . (<> ",\t") . T.intercalate ",\t" . fmap (T.pack . show) $ [k, tk, s]
         in do
-            --mapM_ (T.putStr . (<> ",\t,\t,\t") . bossToText) . M.keys $ relBosses
-            mapM_ (\boss -> printBossStats . fromMaybe (BS 0 0 0) . (M.!? boss) $ bm) bs
+            -- we always have all keys in the boss map bmap by construction; it's total on the Boss type
+            -- However, it stores Maybe BossStats instead!
+            mapM_ (\boss -> printBossStats . fromMaybe (BS 0 0 0) . bossMapGetStats boss $ bmap) bset
             T.putStrLn ""
 
 

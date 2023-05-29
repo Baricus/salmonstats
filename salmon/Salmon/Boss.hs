@@ -8,6 +8,12 @@ module Salmon.Boss (
     textToBoss,
     -- Helper functions to work with boss objects
     sumBossKills,
+    -- A boss map is a total map over bosses, containing optional BossStats.
+    BossMap,
+    -- These functions create and alter these maps
+    bossMapEmpty,
+    bossMapInsertStats,
+    bossMapGetStats,
     -- * King salmonoids
     King(..),
     ) where
@@ -17,6 +23,9 @@ import Salmon.NintendoJSON
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import Data.Map (Map)
+import qualified Data.Map as M
+
 import GHC.Generics ( Generic )
 import GHC.Natural ( Natural ) 
 
@@ -24,6 +33,7 @@ import Text.Read (readMaybe)
 
 import Data.Aeson
 import Data.String (IsString (fromString))
+import Control.Monad (join)
 
 data Boss = Steelhead
           | Flyfish
@@ -91,6 +101,18 @@ instance FromNintendoJSON BossStats where
 sumBossKills :: BossStats -> BossStats -> BossStats
 sumBossKills (BS k tk s) (BS k' tk' s') = BS (k + k') (tk + tk') (s + s')
 
+
+-- some functions for boss maps
+type BossMap = Map Boss (Maybe BossStats)
+-- pulled out to cache this and have it at compile time
+bossMapEmpty :: BossMap
+bossMapEmpty = M.fromDistinctAscList [(k, Nothing) | k <- [minBound..]]
+
+bossMapInsertStats :: Boss -> BossStats -> BossMap -> BossMap
+bossMapInsertStats b s = M.insert b $ Just s
+
+bossMapGetStats :: Boss -> BossMap -> Maybe BossStats
+bossMapGetStats b m = join . M.lookup b $ m
 
 -- King salmonoids!
 data King = K

@@ -45,5 +45,5 @@ executable salmonstats
     other-modules: Summary
 
     -- LANGUAGE extensions used by modules in this package.
-    build-depends:    salmonrun, optparse-applicative
+    build-depends:    salmonrun, optparse-applicative, cassava
     hs-source-dirs:   app

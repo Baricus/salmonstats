@@ -13,12 +13,11 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 
 import Data.Map (Map)
-import qualified Data.Map as M
 
 import GHC.Generics ( Generic )
 import GHC.Natural ( Natural ) 
 
-import Control.Applicative ( Alternative((<|>)) )
+import Control.Applicative ( Alternative((<|>))) 
 
 import Data.Time ( UTCTime )
 
@@ -39,7 +38,7 @@ data Round = CR
                  , rescues    :: Natural
                  , deaths     :: Natural
                  , waves      :: Vector WaveStats
-                 , bosses     :: Map Boss BossStats
+                 , bosses     :: Map Boss (Maybe BossStats) -- not all bosses are present always
                  , king       :: Maybe King
                }
             deriving (Show, Generic)
@@ -69,20 +68,20 @@ instance FromNintendoJSON Round where
         rescues    <- myRes .: "rescueCount"
         deaths     <- myRes .: "rescuedCount"
 
-        waves      <- res .: "waveResults" >>= traverse parseNJSON
+        waves      <- res .: "waveResults" >>= traverse parseNJSON :: Parser (Vector WaveStats)
 
         bosses     <- res .: "enemyResults" >>= V.foldl
                     (\m val -> withObject "bossStats" 
                         (\statObj -> 
-                            M.insert 
+                            bossMapInsertStats
                             -- complex map to turn bosses into the Haskell data counterparts
                             -- translating the string representations
                             <$> (statObj .: "enemy" >>= getName >>= maybe (fail "Unknown Boss") pure . textToBoss
                                     :: Parser Boss) 
-                            <*> parseNJSON val 
-                            <*> m) 
+                            <*> (parseNJSON val :: Parser BossStats)
+                            <*> (m :: Parser BossMap))
                         val)
-                    (pure M.empty) :: Parser (Map Boss BossStats)
+                    (pure bossMapEmpty) :: Parser BossMap
 
         -- we either parse the king or just give nothing back since it wasn't present
         king <- (fmap Just (parseNJSON (Object res)) <|> pure Nothing)
