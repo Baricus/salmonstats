@@ -6,7 +6,8 @@ module Salmon.Boss (
     -- Helper functions to convert between bosses and official name strings
     bossToText,
     textToBoss,
-
+    -- Helper functions to work with boss objects
+    sumBossKills,
     -- * King salmonoids
     King(..),
     ) where
@@ -84,6 +85,10 @@ instance FromJSON BossStats where
 instance FromNintendoJSON BossStats where
     parseNJSON = withObject "boss" $ \obj -> 
         BS <$> (obj .: "defeatCount") <*> (obj .: "teamDefeatCount") <*> (obj .: "popCount")
+
+sumBossKills :: BossStats -> BossStats -> BossStats
+sumBossKills (BS k tk s) (BS k' tk' s') = BS (k + k') (tk + tk') (s + s')
+
 
 -- King salmonoids!
 data King = K
