@@ -23,6 +23,7 @@ import GHC.Natural ( Natural )
 import Text.Read (readMaybe)
 
 import Data.Aeson
+import Data.String (IsString (fromString))
 
 data Boss = Steelhead
           | Flyfish
@@ -38,7 +39,7 @@ data Boss = Steelhead
           | SlamminLid
           | BigShot
           | Mudmouth
-        deriving (Read, Show, Eq, Ord, Generic)
+        deriving (Read, Show, Eq, Ord, Enum, Bounded, Generic)
 
 instance ToJSON Boss where
     toEncoding = genericToEncoding defaultOptions
@@ -48,7 +49,8 @@ instance FromJSONKey Boss where
 
 instance FromJSON Boss where
 
-bossToText :: Boss -> Text
+-- this one is more general to allow any output!
+bossToText :: IsString a => Boss -> a
 bossToText = \cases
     SteelEel       -> "Steel Eel"
     FishStick      -> "Fish Stick"
@@ -56,7 +58,7 @@ bossToText = \cases
     SlamminLid     -> "Slammin' Lid"
     BigShot        -> "Big Shot"
     -- take advantage of the default show since it matches our names
-    b              -> T.pack . show $ b
+    b              -> fromString . show $ b
 
 textToBoss :: Text -> Maybe Boss
 textToBoss = \cases
