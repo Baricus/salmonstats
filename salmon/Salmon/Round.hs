@@ -42,6 +42,8 @@ data Round = CR
                  , waves         :: Vector WaveStats
                  , bosses        :: Map Boss (Maybe BossStats) -- not all bosses are present always
                  , king          :: Maybe King
+                 , nextHist      :: Text
+                 , prevHist      :: Text
                }
             deriving (Show, Generic)
 
@@ -93,6 +95,9 @@ instance FromNintendoJSON Round where
         -- we either parse the king or just give nothing back since it wasn't present
         king <- (fmap Just (parseNJSON (Object res)) <|> pure Nothing)
 
+        next <- res .: "nextHistoryDetail" >>= (.: "id")
+        prev <- res .: "previousHistoryDetail" >>= (.: "id")
+
         -- man, this is an object       
         pure $ CR gameID time stage hazard 
                   username team 
@@ -101,3 +106,4 @@ instance FromNintendoJSON Round where
                   rescues deaths 
                   waves 
                   bosses king
+                  next prev
