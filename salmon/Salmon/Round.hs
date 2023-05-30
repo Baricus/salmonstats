@@ -26,21 +26,22 @@ import Data.Aeson.Types ( Parser )
 
 data Round = CR
                {
-                   gameID     :: Text
-                 , time       :: UTCTime
-                 , stage      :: Text
-                 , hazard     :: Double
-                 , player     :: Text
-                 , team       :: Vector Text
-                 , weapons    :: Vector Text
-                 , special    :: Text
-                 , eggs       :: Natural
-                 , eggAssists :: Natural
-                 , rescues    :: Natural
-                 , deaths     :: Natural
-                 , waves      :: Vector WaveStats
-                 , bosses     :: Map Boss (Maybe BossStats) -- not all bosses are present always
-                 , king       :: Maybe King
+                   gameID        :: Text
+                 , time          :: UTCTime
+                 , stage         :: Text
+                 , hazard        :: Double
+                 , player        :: Text
+                 , team          :: Vector Text -- TODO: decide if this should be more info or not
+                 , playedWeapons :: Vector Text
+                 , allWeapons    :: Vector Text
+                 , special       :: Text
+                 , eggs          :: Natural
+                 , eggAssists    :: Natural
+                 , rescues       :: Natural
+                 , deaths        :: Natural
+                 , waves         :: Vector WaveStats
+                 , bosses        :: Map Boss (Maybe BossStats) -- not all bosses are present always
+                 , king          :: Maybe King
                }
             deriving (Show, Generic)
 
@@ -64,7 +65,10 @@ instance FromNintendoJSON Round where
         username   <- myRes .: "player" >>= getName
         team       <- res .: "memberResults" >>= withArray "MemberResults" 
                                 (traverse (withObject "MemberRes" (\o -> (o .: "player") >>= getName)))
-        weapons    <- myRes .: "weapons" >>= withArray "weapons" (traverse (withObject "weapon" getName))
+
+        pWeapons   <- myRes .: "weapons" >>= withArray "my weapons" (traverse (withObject "weapon" getName))
+        aWeapons   <- res .: "weapons" >>= withArray "weapons" (traverse (withObject "weapon" getName))
+
         special    <- myRes .: "specialWeapon" >>= getName
         eggs       <- myRes .: "goldenDeliverCount"
         eggAssists <- myRes .: "goldenAssistCount"
@@ -91,7 +95,8 @@ instance FromNintendoJSON Round where
 
         -- man, this is an object       
         pure $ CR gameID time stage hazard 
-                  username team weapons special 
+                  username team 
+                  pWeapons aWeapons special 
                   eggs eggAssists 
                   rescues deaths 
                   waves 

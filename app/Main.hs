@@ -54,9 +54,16 @@ printBosses bset CR{bosses=bmap} =
             mapM_ (\boss -> printBossStats . fromMaybe (BS 0 0 0) . bossMapGetStats boss $ bmap) bset
             T.putStrLn ""
 
-
 printRounds :: IO () -> (Round -> IO ()) -> [Round] -> IO ()
 printRounds headline f r = headline *> T.putStrLn "" *> mapM_ f r
+
+-- format notes:
+-- Args should have general options like a list of filters (dates, players, etc) 
+--
+-- Each command should have flags saying what to do with the data (sum, csv, average, trends, etc)
+--
+-- No commands could open up a TUI(?) data explorer app where all this is dynamic?
+-- Would be cool but currently beyond the scope
 
 main :: IO ()
 main = do
