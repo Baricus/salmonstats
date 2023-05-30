@@ -4,15 +4,15 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-
 import Data.Set (Set)
 import qualified Data.Set as S
 
 import Text.Read (readMaybe)
 
 import Options.Applicative
+
+import qualified Data.Csv as Csv
+import qualified Data.Csv.Incremental as Csv
 
 import Salmon
 import Data.Either (rights)

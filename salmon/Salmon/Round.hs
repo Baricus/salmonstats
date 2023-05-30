@@ -31,6 +31,7 @@ data Round = CR
                  , stage      :: Text
                  , hazard     :: Double
                  , player     :: Text
+                 , team       :: Vector Text
                  , weapons    :: Vector Text
                  , special    :: Text
                  , eggs       :: Natural
@@ -61,6 +62,8 @@ instance FromNintendoJSON Round where
         stage      <- res .: "coopStage" >>= getName
         hazard     <- res .: "dangerRate"
         username   <- myRes .: "player" >>= getName
+        team       <- res .: "memberResults" >>= withArray "MemberResults" 
+                                (traverse (withObject "MemberRes" (\o -> (o .: "player") >>= getName)))
         weapons    <- myRes .: "weapons" >>= withArray "weapons" (traverse (withObject "weapon" getName))
         special    <- myRes .: "specialWeapon" >>= getName
         eggs       <- myRes .: "goldenDeliverCount"
@@ -88,7 +91,7 @@ instance FromNintendoJSON Round where
 
         -- man, this is an object       
         pure $ CR gameID time stage hazard 
-                  username weapons special 
+                  username team weapons special 
                   eggs eggAssists 
                   rescues deaths 
                   waves 
