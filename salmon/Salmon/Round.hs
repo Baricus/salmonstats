@@ -1,6 +1,9 @@
 module Salmon.Round (
-    Round(..),
     -- All statistics about a single round of Salmon Run
+    Round(..),
+    GameID, RoundMap,
+    -- Functions for managing round maps
+    toIDMap, getIDs, nextRound, prevRound,
     ) where
 
 import Salmon.NintendoJSON
@@ -13,6 +16,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 
 import Data.Map (Map)
+import qualified Data.Map as M
 
 import GHC.Generics ( Generic )
 import GHC.Natural ( Natural ) 
@@ -23,6 +27,10 @@ import Data.Time ( UTCTime )
 
 import Data.Aeson
 import Data.Aeson.Types ( Parser )
+import Data.List (sortOn)
+
+type GameID = Text
+type RoundMap = Map GameID Round
 
 data Round = CR
                {
@@ -42,10 +50,25 @@ data Round = CR
                  , waves         :: Vector WaveStats
                  , bosses        :: Map Boss (Maybe BossStats) -- not all bosses are present always
                  , king          :: Maybe King
-                 , nextHist      :: Text
-                 , prevHist      :: Text
+                 , nextHist      :: GameID
+                 , prevHist      :: GameID
                }
             deriving (Show, Generic)
+
+-- map of IDs to rounds
+toIDMap :: [Round] -> RoundMap
+toIDMap rounds = M.fromList [(gameID x, x) | x <- rounds]
+
+-- get's IDs in time order
+getIDs :: RoundMap -> [GameID]
+getIDs = reverse . fmap fst . sortOn (time . snd) . M.assocs
+
+nextRound :: Round -> RoundMap -> Maybe Round
+nextRound = M.lookup . nextHist
+
+prevRound :: Round -> RoundMap -> Maybe Round
+prevRound = M.lookup . prevHist
+
 
 instance ToJSON Round where
     toEncoding = genericToEncoding defaultOptions
