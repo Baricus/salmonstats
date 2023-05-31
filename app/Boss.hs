@@ -20,9 +20,11 @@ data Flag = CSV
           | Sum
           | Avg
           | Best
+          deriving (Show, Eq, Ord, Bounded, Enum)
 
 -- data passed on cmd line for the bosses command
 data BossesData = BData (Set Boss) Flag
+                deriving (Show)
 
 bossCmd :: Parser BossesData
 bossCmd = BData 

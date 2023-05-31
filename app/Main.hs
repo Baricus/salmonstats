@@ -14,21 +14,16 @@ import Options.Applicative
 import qualified Data.Csv as Csv
 import qualified Data.Csv.Incremental as Csv
 
-import Salmon
 import Data.Either (rights)
 import Data.Maybe (fromMaybe)
 
+import Salmon
 
-data Commands = Bosses (Set Boss)
+import Boss (bossCmd, BossesData (..))
+
+data Commands = Bosses BossesData
               | Kings (Set Text)
             deriving (Show)
-
-bossCmd :: Parser Commands
-bossCmd = Bosses . S.fromList 
-            <$> many (argument 
-             -- either read in the boss or try the string conversion
-             (maybeReader (\s -> readMaybe s <|> (textToBoss . T.pack) s))
-             (metavar "BOSS NAMES..." <> help "List of bosses to output stats on or nothing for all bosses"))
 
 kingCmd :: Parser Commands
 kingCmd = Kings . S.fromList 
@@ -36,13 +31,13 @@ kingCmd = Kings . S.fromList
 
 opts :: Parser Commands
 opts = subparser
-        (  command "bosses" (info (helper <*> bossCmd) (progDesc "Prints out boss kills for requested bosses"))
+        (  command "bosses" (info (helper <*> (Bosses <$> bossCmd)) (progDesc "Prints out boss kills for requested bosses"))
         <> command "kings"  (info (helper <*> kingCmd) (progDesc "Prints out stats for kings"))
         )
 
 argParser :: ParserInfo Commands
 argParser = info (helper <*> opts) 
-            (fullDesc <> progDesc "Outputs various salmon run stats" <> header "Hello parser!")
+                 (fullDesc <> progDesc "Outputs various salmon run stats" <> header "Hello parser!")
 
 
 printBosses :: Set Boss -> Round -> IO ()
@@ -70,7 +65,7 @@ main = do
     args <- execParser argParser 
     rounds <- rights <$> readRoundsFromNXAPIdir "splatnet3/"
     let f = case args of
-            (Bosses b) -> printRounds 
+            (Bosses (BData b f)) -> printRounds 
                 (mapM_ (T.putStr . (<> ",\t,\t,\t") . bossToText) (if S.null b then S.fromList [minBound..] else b)) 
                 (printBosses (if S.null b then S.fromList [minBound..] else b))
             
