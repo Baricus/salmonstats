@@ -19,9 +19,9 @@ import Data.Maybe (fromMaybe)
 
 import Salmon
 
-import Boss (bossCmd, BossesData (..))
+import qualified Boss as Boss
 
-data Commands = Bosses BossesData
+data Commands = Bosses Boss.Data
               | Kings (Set Text)
             deriving (Show)
 
@@ -31,7 +31,7 @@ kingCmd = Kings . S.fromList
 
 opts :: Parser Commands
 opts = subparser
-        (  command "bosses" (info (helper <*> (Bosses <$> bossCmd)) (progDesc "Prints out boss kills for requested bosses"))
+        (  command "bosses" (info (helper <*> (Bosses <$> Boss.command)) (progDesc "Prints out boss kills for requested bosses"))
         <> command "kings"  (info (helper <*> kingCmd) (progDesc "Prints out stats for kings"))
         )
 
@@ -49,8 +49,8 @@ printBosses bset CR{bosses=bmap} =
             mapM_ (\boss -> printBossStats . fromMaybe (BS 0 0 0) . bossMapGetStats boss $ bmap) bset
             T.putStrLn ""
 
-printRounds :: IO () -> (Round -> IO ()) -> [Round] -> IO ()
-printRounds headline f r = headline *> T.putStrLn "" *> mapM_ f r
+--printRounds :: IO () -> (Round -> IO ()) -> [Round] -> IO ()
+--printRounds headline f r = headline *> T.putStrLn "" *> mapM_ f r
 
 -- format notes:
 -- Args should have general options like a list of filters (dates, players, etc) 
@@ -63,11 +63,11 @@ printRounds headline f r = headline *> T.putStrLn "" *> mapM_ f r
 main :: IO ()
 main = do
     args <- execParser argParser 
-    rounds <- rights <$> readRoundsFromNXAPIdir "splatnet3/"
-    let f = case args of
-            (Bosses (BData b f)) -> printRounds 
-                (mapM_ (T.putStr . (<> ",\t,\t,\t") . bossToText) (if S.null b then S.fromList [minBound..] else b)) 
-                (printBosses (if S.null b then S.fromList [minBound..] else b))
+    rounds <- toIDMap . rights <$> readRoundsFromNXAPIdir "splatnet3/"
+    mapM_ T.putStrLn $ case args of
+            (Bosses bdata) -> Boss.handle bdata rounds
+                --printRounds 
+                --(mapM_ (T.putStr . (<> ",\t,\t,\t") . bossToText) (if S.null b then S.fromList [minBound..] else b)) 
+                --(printBosses (if S.null b then S.fromList [minBound..] else b))
             
             (Kings  _) -> error "not implemented!"
-    f rounds

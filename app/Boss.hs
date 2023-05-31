@@ -23,11 +23,11 @@ data Flag = CSV
           deriving (Show, Eq, Ord, Bounded, Enum)
 
 -- data passed on cmd line for the bosses command
-data BossesData = BData (Set Boss) Flag
+data Data = BData (Set Boss) Flag
                 deriving (Show)
 
-bossCmd :: Parser BossesData
-bossCmd = BData 
+command :: Parser Data
+command = BData 
             -- build our set
             . S.fromList <$> many (argument 
                  -- either read in the boss or try the string conversion function
@@ -43,7 +43,7 @@ bossCmd = BData
             )
 
 -- build output for each option
-handle :: BossesData -> RoundMap -> [Text]
+handle :: Data -> RoundMap -> [Text]
 handle (BData selectedSet f) m = 
     let selectedSet'   = if S.null selectedSet then S.fromList [minBound..] else selectedSet -- empty = all bosses
         selectedBosses = M.map ((`M.restrictKeys` selectedSet') . bosses) $ m
@@ -63,4 +63,13 @@ buildSums :: BossMap -> BossMap -> BossMap
 buildSums = M.unionWith (\l r -> Just $ sumBossKills (fromMaybe (BS 0 0 0) l) (fromMaybe (BS 0 0 0) r))
 
 prettyPrintBossMap :: BossMap -> [Text]
-prettyPrintBossMap = undefined
+prettyPrintBossMap = M.foldMapWithKey buildLine
+    where buildLine _ Nothing   = []
+          buildLine boss (Just BS {kills=k, teamKills=t, spawned=s}) = 
+            [   bossToText boss
+            ,   "\tKills: " <> packShow k
+            ,   "\tTeam Kills: " <> packShow t
+            ,   "\tSpawned: " <> packShow s
+            ,   "" -- empty line
+            ]
+          packShow = T.pack . show
