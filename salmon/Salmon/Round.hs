@@ -50,7 +50,7 @@ data Round = CR
                  , waves         :: Vector WaveStats
                  , bosses        :: Map Boss (Maybe BossStats) -- not all bosses are present always
                  , king          :: Maybe King
-                 , nextHist      :: GameID
+                 , nextHist      :: GameID -- not always present, but useful when they are
                  , prevHist      :: GameID
                }
             deriving (Show, Generic)
@@ -105,11 +105,10 @@ instance FromNintendoJSON Round where
         bosses     <- res .: "enemyResults" >>= V.foldl
                     (\m val -> withObject "bossStats" 
                         (\statObj -> 
-                            bossMapInsertStats
-                            -- complex map to turn bosses into the Haskell data counterparts
+                            -- complex transform to turn bosses into the Haskell data counterparts
                             -- translating the string representations
-                            <$> (statObj .: "enemy" >>= getName >>= maybe (fail "Unknown Boss") pure . textToBoss
-                                    :: Parser Boss) 
+                            bossMapInsertStats
+                            <$> (statObj .: "enemy" >>= getName >>= maybe (fail "Unknown Boss") pure . textToBoss :: Parser Boss) 
                             <*> (parseNJSON val :: Parser BossStats)
                             <*> (m :: Parser BossMap))
                         val)
