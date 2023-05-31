@@ -46,6 +46,7 @@ command = BData
 handle :: Data -> RoundMap -> [Text]
 handle (BData selectedSet f) m = 
     let selectedSet'   = if S.null selectedSet then S.fromList [minBound..] else selectedSet -- empty = all bosses
+        -- a map of only the bosses we want to display
         selectedBosses = M.map ((`M.restrictKeys` selectedSet') . bosses) $ m
      in
         case f of
