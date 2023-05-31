@@ -85,7 +85,7 @@ data BossStats = BS
                {
                    kills     :: Natural
                  , teamKills :: Natural
-                 , spawned   :: Natural
+                 , spawned   :: Natural -- TODO: check if this is what popCount means!
                }
             deriving (Show, Generic)
 

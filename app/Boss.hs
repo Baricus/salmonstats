@@ -67,9 +67,9 @@ prettyPrintBossMap = M.foldMapWithKey buildLine
     where buildLine _ Nothing   = []
           buildLine boss (Just BS {kills=k, teamKills=t, spawned=s}) = 
             [   bossToText boss
-            ,   "\tKills: " <> packShow k
+            ,   "\t     Kills: " <> packShow k
             ,   "\tTeam Kills: " <> packShow t
-            ,   "\tSpawned: " <> packShow s
+            ,   "\t   Spawned: " <> packShow s
             ,   "" -- empty line
             ]
           packShow = T.pack . show
