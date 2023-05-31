@@ -7,37 +7,46 @@ import qualified Data.Text.IO as T
 import Data.Set (Set)
 import qualified Data.Set as S
 
-import Text.Read (readMaybe)
-
 import Options.Applicative
-
-import qualified Data.Csv as Csv
-import qualified Data.Csv.Incremental as Csv
 
 import Data.Either (rights)
 import Data.Maybe (fromMaybe)
 
 import Salmon
+    ( readRoundsFromNXAPIdir,
+      bossMapGetStats,
+      toIDMap,
+      Boss,
+      BossStats(BS),
+      Round(CR, bosses) )
 
 import qualified Boss as Boss
 
-data Commands = Bosses Boss.Data
+data Command = Bosses Boss.Data
               | Kings (Set Text)
             deriving (Show)
 
-kingCmd :: Parser Commands
+data Args = A
+          { dataDir :: FilePath
+          , comm    :: Command
+          }
+
+kingCmd :: Parser Command
 kingCmd = Kings . S.fromList 
             <$> many (argument str (metavar "KING NAMES..." <> help "List of kings to print statistics on or nothing for all kings"))
 
-opts :: Parser Commands
+opts :: Parser Command
 opts = subparser
         (  command "bosses" (info (helper <*> (Bosses <$> Boss.command)) (progDesc "Prints out boss kills for requested bosses"))
         <> command "kings"  (info (helper <*> kingCmd) (progDesc "Prints out stats for kings"))
         )
 
-argParser :: ParserInfo Commands
-argParser = info (helper <*> opts) 
-                 (fullDesc <> progDesc "Outputs various salmon run stats" <> header "Hello parser!")
+argParser :: ParserInfo Args
+argParser = info (helper <*>
+                 -- TODO: change default to nxapi data directory (and move my data over)
+                 (A <$> strOption (value "splatnet3" <> showDefault <> metavar "DIRECTORY" <> long "dir" <> short 'd' <> help "Directory which contains the nxapi salmon run results") 
+                    <*> opts))
+                 (fullDesc <> progDesc "Outputs various salmon run stats")
 
 
 printBosses :: Set Boss -> Round -> IO ()
@@ -62,9 +71,9 @@ printBosses bset CR{bosses=bmap} =
 
 main :: IO ()
 main = do
-    args <- execParser argParser 
-    rounds <- toIDMap . rights <$> readRoundsFromNXAPIdir "splatnet3/"
-    mapM_ T.putStrLn $ case args of
+    A {dataDir=dir, comm=comm} <- execParser argParser 
+    rounds <- toIDMap . rights <$> readRoundsFromNXAPIdir dir
+    mapM_ T.putStrLn $ case comm of
             (Bosses bdata) -> Boss.handle bdata rounds
                 --printRounds 
                 --(mapM_ (T.putStr . (<> ",\t,\t,\t") . bossToText) (if S.null b then S.fromList [minBound..] else b)) 
