@@ -44,7 +44,7 @@ command = BData
                     flag' CSV  (long "csv" <> short 'c' <> help "Output boss kills in CSV format on stdout")
                 <|> flag' Sum  (long "sum" <> short 's' <> help "Sum boss stats per boss to display")
                 <|> flag' Mean (long "avg" <> short 'a' <> help "Average boss stats and display")
-                <|> flag' Best (long "best" <> short 'b' <> help "display the best stats for each boss across selected games")
+                <|> flag' Best (long "best" <> short 'b' <> help "display the best stats for each boss across selected games (best kills, best team kills, and best spawns)")
             )
 
 -- build output for each option
@@ -59,7 +59,7 @@ handle (BData selectedSet f) m =
              CSV  -> [makeHeader selectedBosses] <> buildLines selectedBosses
              Sum  -> prettyPrintBossMap . buildSums $ selectedBosses
              Mean -> prettyPrintBossMap . (avgSummed matches) . buildSums $ selectedBosses
-             _    -> error "not implemented!"
+             Best -> prettyPrintBossMap . findMax $ selectedBosses
 
 -- various helper functions to build up the handle function
 
@@ -88,6 +88,15 @@ buildSums = M.foldl' joinSums bossMapEmpty
 -- converts a summed BossMap into an averaged BossMap
 avgSummed :: Int -> BossMap Natural -> BossMap Double
 avgSummed len = (fmap . fmap) (\(BS k tk s) -> BS (fromIntegral k / fromIntegral len) (fromIntegral tk / fromIntegral len) (fromIntegral s / fromIntegral len))
+
+-- finds the largest statistic for each boss out of all the bosses
+findMax :: (Ord a) => Map k (BossMap a) -> BossMap a
+findMax = M.foldl' (M.unionWith pickMax) bossMapEmpty
+    where pickMax :: (Ord a) => Maybe (BossStats a) -> Maybe (BossStats a) -> Maybe (BossStats a)
+          pickMax Nothing               Nothing               = Nothing
+          pickMax a                     Nothing               = a
+          pickMax Nothing               b                     = b
+          pickMax (Just (BS ak atk as)) (Just (BS bk btk bs)) = Just $ BS (max ak bk) (max atk btk) (max as bs)
 
 -- prints a boss map nicely, 5 lines per boss counting empty lines for spacing
 prettyPrintBossMap :: (Show a) => BossMap a -> [Text]
