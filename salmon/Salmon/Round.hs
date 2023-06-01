@@ -63,11 +63,11 @@ toIDMap rounds = M.fromList [(gameID x, x) | x <- rounds]
 getIDs :: RoundMap -> [GameID]
 getIDs = reverse . fmap fst . sortOn (time . snd) . M.assocs
 
-nextRound :: Round -> RoundMap -> Maybe Round
-nextRound r m = nextHist r >>= flip M.lookup m
+nextRound :: RoundMap -> Round -> Maybe Round
+nextRound m r = nextHist r >>= flip M.lookup m
 
-prevRound :: Round -> RoundMap -> Maybe Round
-prevRound r m = prevHist r >>= flip M.lookup m
+prevRound :: RoundMap -> Round -> Maybe Round
+prevRound m r = prevHist r >>= flip M.lookup m
 
 
 instance ToJSON Round where

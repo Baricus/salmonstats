@@ -42,12 +42,12 @@ data Boss = Steelhead
           | Stinger
           | Scrapper
           | Maws
-          | Griller
-          | Goldie
           | FishStick
           | FlipperFlopper
           | SlamminLid
           | BigShot
+          | Goldie
+          | Griller
           | Mudmouth
         deriving (Read, Show, Eq, Ord, Enum, Bounded, Generic)
 

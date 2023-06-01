@@ -54,6 +54,9 @@ handle (BData selectedSet f) m =
              Sum -> prettyPrintBossMap . M.foldl' buildSums bossMapEmpty $ selectedBosses
              _   -> undefined
 
+-- builds the header for the boss CSV output
+-- each boss get's 3 columns: kills, team kills (which includes your own) and number spawned
+-- TODO: try turning this into a foldr and ensure everything is still ordered the same (don't reverse the list)
 makeHeader :: Map GameID BossMap -> Text
 makeHeader = T.intercalate "\t" . M.foldlWithKey' (\headLine boss _ -> headLine <> [buildRows boss]) [] . head . M.elems
     where buildRows b = let name = bossToText b
@@ -61,6 +64,7 @@ makeHeader = T.intercalate "\t" . M.foldlWithKey' (\headLine boss _ -> headLine 
 
 
 -- builds up CSV lines from the map of bosses
+-- If there is no data for a boss (it wasn't in the wave) we show it as blank
 buildLines :: Map GameID BossMap -> [Text]
 buildLines = fmap (T.intercalate "\t" . fmap ( printBM) . M.elems) . M.elems
     where printBM (Just (BS k tk s)) = packShow k <> ",\t" <> packShow tk <> ",\t" <> packShow s <> ","
