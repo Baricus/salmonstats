@@ -55,11 +55,19 @@ handle (BData selectedSet f) m =
              _   -> undefined
 
 makeHeader :: Map GameID BossMap -> Text
-makeHeader = undefined
+makeHeader = T.intercalate "\t" . M.foldlWithKey' (\headLine boss _ -> headLine <> [buildRows boss]) [] . head . M.elems
+    where buildRows b = let name = bossToText b
+                            in name <> " kills,\t" <> name <> " team kills,\t" <> name <> " spawns,"
 
+
+-- builds up CSV lines from the map of bosses
 buildLines :: Map GameID BossMap -> [Text]
-buildLines = undefined
+buildLines = fmap (T.intercalate "\t" . fmap ( printBM) . M.elems) . M.elems
+    where printBM (Just (BS k tk s)) = packShow k <> ",\t" <> packShow tk <> ",\t" <> packShow s <> ","
+          printBM Nothing            = ",\t,\t," -- nothing there but same number of commas and tabs
+          packShow = T.pack . show
 
+-- folds two maps together into a map of total kills
 buildSums :: BossMap -> BossMap -> BossMap
 buildSums = M.unionWith (\l r -> Just $ sumBossKills (fromMaybe (BS 0 0 0) l) (fromMaybe (BS 0 0 0) r))
 

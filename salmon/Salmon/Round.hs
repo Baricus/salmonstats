@@ -50,8 +50,8 @@ data Round = CR
                  , waves         :: Vector WaveStats
                  , bosses        :: Map Boss (Maybe BossStats) -- not all bosses are present always
                  , king          :: Maybe King
-                 , nextHist      :: GameID -- not always present, but useful when they are
-                 , prevHist      :: GameID
+                 , nextHist      :: Maybe GameID -- not always present, but useful when they are
+                 , prevHist      :: Maybe GameID
                }
             deriving (Show, Generic)
 
@@ -64,10 +64,10 @@ getIDs :: RoundMap -> [GameID]
 getIDs = reverse . fmap fst . sortOn (time . snd) . M.assocs
 
 nextRound :: Round -> RoundMap -> Maybe Round
-nextRound = M.lookup . nextHist
+nextRound r m = nextHist r >>= flip M.lookup m
 
 prevRound :: Round -> RoundMap -> Maybe Round
-prevRound = M.lookup . prevHist
+prevRound r m = prevHist r >>= flip M.lookup m
 
 
 instance ToJSON Round where
@@ -117,8 +117,8 @@ instance FromNintendoJSON Round where
         -- we either parse the king or just give nothing back since it wasn't present
         king <- (fmap Just (parseNJSON (Object res)) <|> pure Nothing)
 
-        next <- res .: "nextHistoryDetail" >>= (.: "id")
-        prev <- res .: "previousHistoryDetail" >>= (.: "id")
+        next <- res .:? "nextHistoryDetail" >>= traverse (.: "id")
+        prev <- res .:? "previousHistoryDetail" >>= traverse (.: "id")
 
         -- man, this is an object       
         pure $ CR gameID time stage hazard 
