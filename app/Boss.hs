@@ -56,9 +56,8 @@ handle (BData selectedSet f) m =
 
 -- builds the header for the boss CSV output
 -- each boss get's 3 columns: kills, team kills (which includes your own) and number spawned
--- TODO: try turning this into a foldr and ensure everything is still ordered the same (don't reverse the list)
 makeHeader :: Map GameID BossMap -> Text
-makeHeader = T.intercalate "\t" . M.foldlWithKey' (\headLine boss _ -> headLine <> [buildRows boss]) [] . head . M.elems
+makeHeader = T.intercalate "\t" . ("Game ID," :) . M.foldrWithKey (\boss _ headLine -> buildRows boss : headLine) [] . head . M.elems
     where buildRows b = let name = bossToText b
                             in name <> " kills,\t" <> name <> " team kills,\t" <> name <> " spawns,"
 
@@ -66,9 +65,9 @@ makeHeader = T.intercalate "\t" . M.foldlWithKey' (\headLine boss _ -> headLine 
 -- builds up CSV lines from the map of bosses
 -- If there is no data for a boss (it wasn't in the wave) we show it as blank
 buildLines :: Map GameID BossMap -> [Text]
-buildLines = fmap (T.intercalate "\t" . fmap ( printBM) . M.elems) . M.elems
-    where printBM (Just (BS k tk s)) = packShow k <> ",\t" <> packShow tk <> ",\t" <> packShow s <> ","
-          printBM Nothing            = ",\t,\t," -- nothing there but same number of commas and tabs
+buildLines = fmap (\(i, v) -> T.intercalate "\t" . (i <> "," :) . fmap printBStat . M.elems $ v) . M.assocs
+    where printBStat (Just (BS k tk s)) = packShow k <> ",\t" <> packShow tk <> ",\t" <> packShow s <> ","
+          printBStat Nothing            = ",\t,\t," -- nothing there but same number of commas and tabs
           packShow = T.pack . show
 
 -- folds two maps together into a map of total kills
