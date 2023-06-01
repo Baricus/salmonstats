@@ -81,37 +81,37 @@ textToBoss = \cases
     t                 -> readMaybe . T.unpack $ t
 
 -- The 3 pieces of data we get about a boss after a round
-data BossStats = BS
+data BossStats a = BS
                {
-                   kills     :: Natural
-                 , teamKills :: Natural
-                 , spawned   :: Natural -- TODO: check if this is what popCount means!
+                   kills     :: a 
+                 , teamKills :: a
+                 , spawned   :: a -- TODO: check if this is what popCount means!
                }
             deriving (Show, Generic)
 
-instance ToJSON BossStats where
+instance ToJSON (BossStats Natural) where
     toEncoding = genericToEncoding defaultOptions
 
-instance FromJSON BossStats where
+instance FromJSON (BossStats Natural) where
 
-instance FromNintendoJSON BossStats where
+instance FromNintendoJSON (BossStats Natural) where
     parseNJSON = withObject "boss" $ \obj -> 
         BS <$> (obj .: "defeatCount") <*> (obj .: "teamDefeatCount") <*> (obj .: "popCount")
 
-sumBossKills :: BossStats -> BossStats -> BossStats
+sumBossKills :: BossStats Natural -> BossStats Natural -> BossStats Natural
 sumBossKills (BS k tk s) (BS k' tk' s') = BS (k + k') (tk + tk') (s + s')
 
 
 -- some functions for boss maps
-type BossMap = Map Boss (Maybe BossStats)
+type BossMap a = Map Boss (Maybe (BossStats a))
 -- pulled out to cache this and have it at compile time
-bossMapEmpty :: BossMap
+bossMapEmpty :: BossMap a
 bossMapEmpty = M.fromDistinctAscList [(k, Nothing) | k <- [minBound..]]
 
-bossMapInsertStats :: Boss -> BossStats -> BossMap -> BossMap
+bossMapInsertStats :: Boss -> BossStats a -> BossMap a -> BossMap a
 bossMapInsertStats b s = M.insert b $ Just s
 
-bossMapGetStats :: Boss -> BossMap -> Maybe BossStats
+bossMapGetStats :: Boss -> BossMap a -> Maybe (BossStats a)
 bossMapGetStats b m = join . M.lookup b $ m
 
 -- King salmonoids!

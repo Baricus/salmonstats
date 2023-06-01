@@ -48,7 +48,7 @@ data Round = CR
                  , rescues       :: Natural
                  , deaths        :: Natural
                  , waves         :: Vector WaveStats
-                 , bosses        :: Map Boss (Maybe BossStats) -- not all bosses are present always
+                 , bosses        :: Map Boss (Maybe (BossStats Natural)) -- not all bosses are present always
                  , king          :: Maybe King
                  , nextHist      :: Maybe GameID -- not always present, but useful when they are
                  , prevHist      :: Maybe GameID
@@ -109,10 +109,10 @@ instance FromNintendoJSON Round where
                             -- translating the string representations
                             bossMapInsertStats
                             <$> (statObj .: "enemy" >>= getName >>= maybe (fail "Unknown Boss") pure . textToBoss :: Parser Boss) 
-                            <*> (parseNJSON val :: Parser BossStats)
-                            <*> (m :: Parser BossMap))
+                            <*> (parseNJSON val :: Parser (BossStats Natural))
+                            <*> (m :: Parser (BossMap Natural)))
                         val)
-                    (pure bossMapEmpty) :: Parser BossMap
+                    (pure bossMapEmpty) :: Parser (BossMap Natural)
 
         -- we either parse the king or just give nothing back since it wasn't present
         king <- (fmap Just (parseNJSON (Object res)) <|> pure Nothing)

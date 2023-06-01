@@ -1,4 +1,6 @@
-module Boss where
+module Boss (
+        Boss.command, handle, Data
+    ) where
 
 import Data.Set (Set)
 import qualified Data.Set as S
@@ -9,6 +11,8 @@ import qualified Data.Text as T
 import Data.Map (Map)
 import qualified Data.Map as M
 
+import GHC.Natural
+
 import Text.Read (readMaybe)
 
 import Options.Applicative
@@ -18,7 +22,7 @@ import Data.Maybe (fromMaybe)
 
 data Flag = CSV
           | Sum
-          | Avg
+          | Mean
           | Best
           deriving (Show, Eq, Ord, Bounded, Enum)
 
@@ -29,17 +33,18 @@ data Data = BData (Set Boss) Flag
 command :: Parser Data
 command = BData 
             -- build our set
-            . S.fromList <$> many (argument 
+            . S.fromList 
+            <$> many (argument 
                  -- either read in the boss or try the string conversion function
                  -- to allow for both names
                  (maybeReader (\s -> readMaybe s <|> (textToBoss . T.pack) s))
                  (metavar "BOSS NAMES..." <> help "List of bosses to output stats on or nothing for all bosses"))
-            -- flags for every option we can do
-            <*> (
-                flag' CSV  (long "csv" <> short 'c' <> help "Output boss kills in CSV format on stdout")
-            <|> flag' Sum  (long "sum" <> short 's' <> help "Sum boss stats per boss to display")
-            <|> flag' Avg  (long "avg" <> short 'a' <> help "Average boss stats and display")
-            <|> flag' Best (long "best" <> short 'b' <> help "display the best stats for each boss across selected games")
+                -- flags for every option we can do
+            <*>                (
+                    flag' CSV  (long "csv" <> short 'c' <> help "Output boss kills in CSV format on stdout")
+                <|> flag' Sum  (long "sum" <> short 's' <> help "Sum boss stats per boss to display")
+                <|> flag' Mean (long "avg" <> short 'a' <> help "Average boss stats and display")
+                <|> flag' Best (long "best" <> short 'b' <> help "display the best stats for each boss across selected games")
             )
 
 -- build output for each option
@@ -48,15 +53,19 @@ handle (BData selectedSet f) m =
     let selectedSet'   = if S.null selectedSet then S.fromList [minBound..] else selectedSet -- empty = all bosses
         -- a map of only the bosses we want to display
         selectedBosses = M.map ((`M.restrictKeys` selectedSet') . bosses) $ m
+        matches        = M.size m
      in
         case f of
-             CSV -> [makeHeader selectedBosses] <> buildLines selectedBosses
-             Sum -> prettyPrintBossMap . M.foldl' buildSums bossMapEmpty $ selectedBosses
-             _   -> undefined
+             CSV  -> [makeHeader selectedBosses] <> buildLines selectedBosses
+             Sum  -> prettyPrintBossMap . buildSums $ selectedBosses
+             Mean -> prettyPrintBossMap . (avgSummed matches) . buildSums $ selectedBosses
+             _    -> error "not implemented!"
+
+-- various helper functions to build up the handle function
 
 -- builds the header for the boss CSV output
 -- each boss get's 3 columns: kills, team kills (which includes your own) and number spawned
-makeHeader :: Map GameID BossMap -> Text
+makeHeader :: Map GameID (BossMap a) -> Text
 makeHeader = T.intercalate "\t" . ("Game ID," :) . M.foldrWithKey (\boss _ headLine -> buildRows boss : headLine) [] . head . M.elems
     where buildRows b = let name = bossToText b
                             in name <> " kills,\t" <> name <> " team kills,\t" <> name <> " spawns,"
@@ -64,17 +73,24 @@ makeHeader = T.intercalate "\t" . ("Game ID," :) . M.foldrWithKey (\boss _ headL
 
 -- builds up CSV lines from the map of bosses
 -- If there is no data for a boss (it wasn't in the wave) we show it as blank
-buildLines :: Map GameID BossMap -> [Text]
+buildLines :: (Show a) => Map GameID (BossMap a) -> [Text]
 buildLines = fmap (\(i, v) -> T.intercalate "\t" . (i <> "," :) . fmap printBStat . M.elems $ v) . M.assocs
     where printBStat (Just (BS k tk s)) = packShow k <> ",\t" <> packShow tk <> ",\t" <> packShow s <> ","
           printBStat Nothing            = ",\t,\t," -- nothing there but same number of commas and tabs
           packShow = T.pack . show
 
 -- folds two maps together into a map of total kills
-buildSums :: BossMap -> BossMap -> BossMap
-buildSums = M.unionWith (\l r -> Just $ sumBossKills (fromMaybe (BS 0 0 0) l) (fromMaybe (BS 0 0 0) r))
+-- anytime we don't see a boss, it's replaced with all 0's
+buildSums :: Map k (BossMap Natural) -> BossMap Natural
+buildSums = M.foldl' joinSums bossMapEmpty
+    where joinSums = M.unionWith (\l r -> Just $ sumBossKills (fromMaybe (BS 0 0 0) l) (fromMaybe (BS 0 0 0) r))
 
-prettyPrintBossMap :: BossMap -> [Text]
+-- converts a summed BossMap into an averaged BossMap
+avgSummed :: Int -> BossMap Natural -> BossMap Double
+avgSummed len = (fmap . fmap) (\(BS k tk s) -> BS (fromIntegral k / fromIntegral len) (fromIntegral tk / fromIntegral len) (fromIntegral s / fromIntegral len))
+
+-- prints a boss map nicely, 5 lines per boss counting empty lines for spacing
+prettyPrintBossMap :: (Show a) => BossMap a -> [Text]
 prettyPrintBossMap = M.foldMapWithKey buildLine
     where buildLine _ Nothing   = []
           buildLine boss (Just BS {kills=k, teamKills=t, spawned=s}) = 
