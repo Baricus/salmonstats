@@ -12,7 +12,13 @@ import Data.Either (rights)
 
 import Salmon ( readRoundsFromNXAPIdir, toIDMap )
 
+import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone, utcToLocalTime)
+import Data.Time.Format (TimeLocale, defaultTimeLocale)
+
 import qualified Boss as Boss
+
+import qualified Filters as Filters
+
 
 data Command = Bosses Boss.Data
               | Kings (Set Text)
@@ -20,6 +26,7 @@ data Command = Bosses Boss.Data
 
 data Args = A
           { dataDir :: FilePath
+          , filters :: Filters.Data
           , comm    :: Command
           }
 
@@ -33,10 +40,11 @@ opts = subparser
         <> command "kings"  (info (helper <*> kingCmd) (progDesc "Prints out stats for kings"))
         )
 
-argParser :: ParserInfo Args
-argParser = info (helper <*>
+argParser :: UTCTime -> TimeZone -> TimeLocale -> ParserInfo Args
+argParser time zone local = info (helper <*>
                  -- TODO: change default to nxapi data directory (and move my data over)
                  (A <$> strOption (value "splatnet3" <> showDefault <> metavar "DIRECTORY" <> long "dir" <> short 'd' <> help "Directory which contains the nxapi salmon run results") 
+                    <*> Filters.opts time zone local
                     <*> opts))
                  (fullDesc <> progDesc "Outputs various salmon run stats")
 
@@ -50,7 +58,13 @@ argParser = info (helper <*>
 
 main :: IO ()
 main = do
-    A {dataDir=dir, comm=comm} <- execParser argParser 
+    -- get time info to pass on
+    time <- getCurrentTime
+    zone <- getCurrentTimeZone
+    --let localTime = utcToLocalTime zone time
+
+    A {dataDir=dir, filters=filt, comm=comm} <- execParser $ argParser time zone defaultTimeLocale
+    print filt
     rounds <- toIDMap . rights <$> readRoundsFromNXAPIdir dir
     mapM_ T.putStrLn $ case comm of
             (Bosses bdata) -> Boss.handle bdata rounds            
