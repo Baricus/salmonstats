@@ -1,7 +1,6 @@
 module Main where
 
 import Data.Text (Text)
-import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
 import Data.Set (Set)
@@ -10,15 +9,8 @@ import qualified Data.Set as S
 import Options.Applicative
 
 import Data.Either (rights)
-import Data.Maybe (fromMaybe)
 
-import Salmon
-    ( readRoundsFromNXAPIdir,
-      bossMapGetStats,
-      toIDMap,
-      Boss,
-      BossStats(BS),
-      Round(CR, bosses) )
+import Salmon ( readRoundsFromNXAPIdir, toIDMap )
 
 import qualified Boss as Boss
 
@@ -48,19 +40,6 @@ argParser = info (helper <*>
                     <*> opts))
                  (fullDesc <> progDesc "Outputs various salmon run stats")
 
-
-printBosses :: Set Boss -> Round -> IO ()
-printBosses bset CR{bosses=bmap} = 
-    let printBossStats (BS k tk s) = T.putStr . (<> ",\t") . T.intercalate ",\t" . fmap (T.pack . show) $ [k, tk, s]
-        in do
-            -- we always have all keys in the boss map bmap by construction; it's total on the Boss type
-            -- However, it stores Maybe BossStats instead!
-            mapM_ (\boss -> printBossStats . fromMaybe (BS 0 0 0) . bossMapGetStats boss $ bmap) bset
-            T.putStrLn ""
-
---printRounds :: IO () -> (Round -> IO ()) -> [Round] -> IO ()
---printRounds headline f r = headline *> T.putStrLn "" *> mapM_ f r
-
 -- format notes:
 -- Args should have general options like a list of filters (dates, players, etc) 
 --
@@ -74,9 +53,5 @@ main = do
     A {dataDir=dir, comm=comm} <- execParser argParser 
     rounds <- toIDMap . rights <$> readRoundsFromNXAPIdir dir
     mapM_ T.putStrLn $ case comm of
-            (Bosses bdata) -> Boss.handle bdata rounds
-                --printRounds 
-                --(mapM_ (T.putStr . (<> ",\t,\t,\t") . bossToText) (if S.null b then S.fromList [minBound..] else b)) 
-                --(printBosses (if S.null b then S.fromList [minBound..] else b))
-            
+            (Bosses bdata) -> Boss.handle bdata rounds            
             (Kings  _) -> error "not implemented!"

@@ -8,6 +8,7 @@ module Salmon.Round (
 
 import Salmon.NintendoJSON
 import Salmon.Boss
+import Salmon.BossMap (BossMap(..))
 import Salmon.Wave
 
 import Data.Text (Text)
@@ -48,7 +49,7 @@ data Round = CR
                  , rescues       :: Natural
                  , deaths        :: Natural
                  , waves         :: Vector WaveStats
-                 , bosses        :: Map Boss (Maybe (BossStats Natural)) -- not all bosses are present always
+                 , bosses        :: BossMap Natural -- not all bosses are present always
                  , king          :: Maybe King
                  , nextHist      :: Maybe GameID -- not always present, but useful when they are
                  , prevHist      :: Maybe GameID
@@ -107,12 +108,12 @@ instance FromNintendoJSON Round where
                         (\statObj -> 
                             -- complex transform to turn bosses into the Haskell data counterparts
                             -- translating the string representations
-                            bossMapInsertStats
+                            M.insert
                             <$> (statObj .: "enemy" >>= getName >>= maybe (fail "Unknown Boss") pure . textToBoss :: Parser Boss) 
                             <*> (parseNJSON val :: Parser (BossStats Natural))
-                            <*> (m :: Parser (BossMap Natural)))
+                            <*> m)
                         val)
-                    (pure bossMapEmpty) :: Parser (BossMap Natural)
+                    (pure M.empty) :: Parser (Map Boss (BossStats Natural))
 
         -- we either parse the king or just give nothing back since it wasn't present
         king <- (fmap Just (parseNJSON (Object res)) <|> pure Nothing)
@@ -127,5 +128,5 @@ instance FromNintendoJSON Round where
                   eggs eggAssists 
                   rescues deaths 
                   waves 
-                  bosses king
+                  (BossMap bosses) king
                   next prev

@@ -7,13 +7,7 @@ module Salmon.Boss (
     bossToText,
     textToBoss,
     -- Helper functions to work with boss objects
-    sumBossKills,
-    -- A boss map is a total map over bosses, containing optional BossStats.
-    BossMap,
-    -- These functions create and alter these maps
-    bossMapEmpty,
-    bossMapInsertStats,
-    bossMapGetStats,
+    sumBossStats,
     -- * King salmonoids
     King(..),
     ) where
@@ -23,9 +17,6 @@ import Salmon.NintendoJSON
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import Data.Map (Map)
-import qualified Data.Map as M
-
 import GHC.Generics ( Generic )
 import GHC.Natural ( Natural ) 
 
@@ -33,7 +24,6 @@ import Text.Read (readMaybe)
 
 import Data.Aeson
 import Data.String (IsString (fromString))
-import Control.Monad (join)
 
 data Boss = Steelhead
           | Flyfish
@@ -89,30 +79,29 @@ data BossStats a = BS
                }
             deriving (Show, Generic)
 
-instance ToJSON (BossStats Natural) where
+instance (ToJSON a) => ToJSON (BossStats a) where
     toEncoding = genericToEncoding defaultOptions
 
-instance FromJSON (BossStats Natural) where
+instance (FromJSON a) => FromJSON (BossStats a) where
 
 instance FromNintendoJSON (BossStats Natural) where
     parseNJSON = withObject "boss" $ \obj -> 
         BS <$> (obj .: "defeatCount") <*> (obj .: "teamDefeatCount") <*> (obj .: "popCount")
 
-sumBossKills :: BossStats Natural -> BossStats Natural -> BossStats Natural
-sumBossKills (BS k tk s) (BS k' tk' s') = BS (k + k') (tk + tk') (s + s')
+instance Functor BossStats where
+    fmap f (BS k tk sp) = BS (f k) (f tk) (f sp)
+
+instance Applicative BossStats where
+    pure a = BS a a a
+    (<*>) :: BossStats (a -> b) -> BossStats a -> BossStats b
+    (<*>) (BS fk ftk fsp) (BS ak atk asp) = BS (fk ak) (ftk atk) (fsp asp)
+
+-- No monad instance; it wouldn't make sense
 
 
--- some functions for boss maps
-type BossMap a = Map Boss (Maybe (BossStats a))
--- pulled out to cache this and have it at compile time
-bossMapEmpty :: BossMap a
-bossMapEmpty = M.fromDistinctAscList [(k, Nothing) | k <- [minBound..]]
+sumBossStats :: (Num a) => BossStats a -> BossStats a -> BossStats a
+sumBossStats (BS k tk s) (BS k' tk' s') = BS (k + k') (tk + tk') (s + s')
 
-bossMapInsertStats :: Boss -> BossStats a -> BossMap a -> BossMap a
-bossMapInsertStats b s = M.insert b $ Just s
-
-bossMapGetStats :: Boss -> BossMap a -> Maybe (BossStats a)
-bossMapGetStats b m = join . M.lookup b $ m
 
 -- King salmonoids!
 data King = K
