@@ -1,15 +1,19 @@
-module Filters where
+module Filters (
+        opts,
+        Data,
+        filterRounds,
+    ) where
 
 import Options.Applicative
 
 import Salmon
 
-import Salmon.BossMap (BossMap)
-import qualified Salmon.BossMap as BM
+import qualified Data.Map as M
+
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 
 import Data.Text (Text)
-
-import Data.Maybe (maybeToList)
 
 import Data.Time
     ( fromGregorian,
@@ -19,45 +23,44 @@ import Data.Time
       TimeZone,
       parseTimeM,
       localTimeToUTC ) 
+import Data.Foldable1 (Foldable1(foldrMap1))
 
-
-data UnionFilter = Player Text
-                 | Stage Text
+data Pred = Player Text
+          | Stage Text
+          | TimeBefore UTCTime
+          | TimeAfter UTCTime
         deriving (Read, Show, Eq, Ord)
 
-data IntersectionFilter = TimeBefore UTCTime
-                        | TimeAfter UTCTime
-        deriving (Read, Show, Eq, Ord)
+data Join = U -- Union
+          | I -- Intersection
+        deriving (Read, Show, Eq, Ord, Bounded, Enum)
 
-data Filter = U UnionFilter
-            | I IntersectionFilter
+
+data Filter = Filter Join Pred
         deriving (Read, Show, Eq, Ord)
-            
 
 type Data = [Filter]
 
 opts :: UTCTime -> TimeZone -> TimeLocale -> Parser [Filter]
 opts UTCTime{utctDay=day} zone local = 
-    asum 
-    [ maybeToList <$> optional
-        (option (I . TimeBefore <$> maybeReader (parseTime))
+    -- this allows you to repeat multiple before and afters, which is not ideal
+    -- but better than nothing
+    many $ asum
+    [ (option (Filter I . TimeBefore <$> maybeReader (parseTime))
             (long "before" <> short 'b' <> metavar timeFMT <> help "Filter matches after this time"))
-    , maybeToList <$> optional
-        (option (I . TimeAfter <$> maybeReader (parseTime))
+    , (option (Filter I . TimeAfter <$> maybeReader (parseTime))
             (long "after" <> short 'a' <> metavar timeFMT <> help "Filter matches before this time"))
-    , many 
-        (U . Player 
+    , (Filter U . Player 
             <$> strOption 
                 (long "player" <> short 'p' <> metavar "PLAYER" <> help "Filter matches to ones with PLAYER"))
-    , many
-        (U . Stage <$> strOption
+    , (Filter U . Stage <$> strOption
                 (long "stage" <> short 's' <> metavar "STAGE" <> help "Filter matches to ones on STAGE"))
     ]
    where timeFMT = "[yyyy-]mm-ddThh:mm[:ss][.sss]"
          -- so many time formats...
          parseTime timeStr = 
             let (startYear, _, _) = toGregorian day
-                in asum
+                in asum -- whichever one passes
             -- assume current day if not given a day (replace offset (utctDayTime) only)
             [ UTCTime day . utctDayTime . localTimeToUTC zone <$> parseTimeM False local "%H" timeStr
             , UTCTime day . utctDayTime . localTimeToUTC zone <$> parseTimeM False local "%R" timeStr
@@ -84,16 +87,34 @@ opts UTCTime{utctDay=day} zone local =
         -- clips invalid values
          replaceYear year (UTCTime d t) = let (_, curMonth, curDay) = toGregorian d
                                   in UTCTime (fromGregorian year curMonth curDay) t
-            
--- actually process the filters
-splitFilters :: [Filter] -> ([IntersectionFilter], [UnionFilter])
-splitFilters = foldr (\f (i, u) -> 
-                     case f of
-                          I f' -> (f' : i, u)
-                          U f' -> (i, f' : u)
-                ) ([], [])
 
---filter :: [Filter] -> RoundMap -> RoundMap
---filter [] m = m
---filter [U]
 
+-- convert a Predicate to its implementation
+fromPred  :: Pred -> (Round -> Bool)
+fromPred = \cases
+    (Player name)  -> (isTeammate name)
+    (Stage  name)  -> ((== name) . stage)
+    (TimeBefore t) -> ((< t) . time)
+    (TimeAfter t)  -> ((> t) . time)
+
+
+-- folds a list of filters into a single filter instruction
+fromFilters :: NonEmpty Filter -> (Round -> Bool)
+fromFilters  l = foldrMap1 firstFilter foldFilter l
+    where -- all other filters hold and this one does too
+          foldFilter (Filter I p) f = (fromPred p `andF` f)
+          -- either P is true and all previous filters hold or P is false
+          -- and all previous filters hold
+          foldFilter (Filter U p) f = ((fromPred p `andF` f) `orF` f)
+
+          -- first filter must always hold, regardless of Union or Intersection
+          firstFilter (Filter _ p) = (\r -> fromPred p $ r)
+
+          andF f1 f2 = (\r -> f1 r && f2 r)
+          orF  f1 f2 = (\r -> f1 r || f2 r)
+
+-- filters the roundMap given the list of filters to apply
+-- assumes that the empty list means no filter
+filterRounds :: [Filter] -> RoundMap -> RoundMap
+filterRounds [] = id
+filterRounds l  = M.filter . fromFilters . NE.fromList $ l -- safe due to earlier case for []

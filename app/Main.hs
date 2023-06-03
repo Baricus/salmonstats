@@ -64,8 +64,10 @@ main = do
     --let localTime = utcToLocalTime zone time
 
     A {dataDir=dir, filters=filt, comm=comm} <- execParser $ argParser time zone defaultTimeLocale
-    print filt
     rounds <- toIDMap . rights <$> readRoundsFromNXAPIdir dir
+    let filteredRounds = Filters.filterRounds filt rounds
+    print filt
+    print $ length filteredRounds
     mapM_ T.putStrLn $ case comm of
-            (Bosses bdata) -> Boss.handle bdata rounds            
+            (Bosses bdata) -> Boss.handle bdata filteredRounds
             (Kings  _) -> error "not implemented!"

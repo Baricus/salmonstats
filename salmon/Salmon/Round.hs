@@ -1,9 +1,12 @@
 module Salmon.Round (
     -- All statistics about a single round of Salmon Run
     Round(..),
+    GameResult(..),
     GameID, RoundMap,
     -- Functions for managing round maps
     toIDMap, getIDs, nextRound, prevRound,
+    -- Helper functions for working with Rounds
+    isTeammate,
     ) where
 
 import Salmon.NintendoJSON
@@ -33,11 +36,21 @@ import Data.List (sortOn)
 type GameID = Text
 type RoundMap = Map GameID Round
 
+data GameResult = Won -- beat all 3-4 waves
+         | Loss Natural -- final wave number
+    deriving (Show, Generic)
+
+instance ToJSON GameResult where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON GameResult where
+
 data Round = CR
                {
                    gameID        :: Text
                  , time          :: UTCTime
                  , stage         :: Text
+                 , result        :: GameResult
                  , hazard        :: Double
                  , player        :: Text
                  , team          :: Vector Text -- TODO: decide if this should be more info or not
@@ -87,6 +100,7 @@ instance FromNintendoJSON Round where
         gameID     <- res .: "id"
         time       <- res .: "playedTime"
         stage      <- res .: "coopStage" >>= getName
+        gameResult <- (\i -> if i == 0 then Won else Loss i) <$> res .: "resultWave"
         hazard     <- res .: "dangerRate"
         username   <- myRes .: "player" >>= getName
         team       <- res .: "memberResults" >>= withArray "MemberResults" 
@@ -122,7 +136,7 @@ instance FromNintendoJSON Round where
         prev <- res .:? "previousHistoryDetail" >>= traverse (.: "id")
 
         -- man, this is an object       
-        pure $ CR gameID time stage hazard 
+        pure $ CR gameID time stage gameResult hazard 
                   username team 
                   pWeapons aWeapons special 
                   eggs eggAssists 
@@ -130,3 +144,7 @@ instance FromNintendoJSON Round where
                   waves 
                   (BossMap bosses) king
                   next prev
+
+-- helper/util functions
+isTeammate :: Text -> Round -> Bool
+isTeammate name = V.elem name . team
