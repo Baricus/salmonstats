@@ -11,16 +11,28 @@ import Data.Text (Text)
 
 import Data.Maybe (maybeToList)
 
-import Data.Time 
-import Data.Time.Format
-import Data.Time.Calendar.OrdinalDate
+import Data.Time
+    ( fromGregorian,
+      toGregorian,
+      UTCTime(..),
+      TimeLocale,
+      TimeZone,
+      parseTimeM,
+      localTimeToUTC ) 
 
 
-data Filter = Player Text
-            | TimeBefore UTCTime
-            | TimeAfter UTCTime
-            | Stage Text
+data UnionFilter = Player Text
+                 | Stage Text
         deriving (Read, Show, Eq, Ord)
+
+data IntersectionFilter = TimeBefore UTCTime
+                        | TimeAfter UTCTime
+        deriving (Read, Show, Eq, Ord)
+
+data Filter = U UnionFilter
+            | I IntersectionFilter
+        deriving (Read, Show, Eq, Ord)
+            
 
 type Data = [Filter]
 
@@ -28,17 +40,17 @@ opts :: UTCTime -> TimeZone -> TimeLocale -> Parser [Filter]
 opts UTCTime{utctDay=day} zone local = 
     asum 
     [ maybeToList <$> optional
-        (option (TimeBefore <$> maybeReader (parseTime))
+        (option (I . TimeBefore <$> maybeReader (parseTime))
             (long "before" <> short 'b' <> metavar timeFMT <> help "Filter matches after this time"))
     , maybeToList <$> optional
-        (option (TimeAfter <$> maybeReader (parseTime))
+        (option (I . TimeAfter <$> maybeReader (parseTime))
             (long "after" <> short 'a' <> metavar timeFMT <> help "Filter matches before this time"))
     , many 
-        (Player 
+        (U . Player 
             <$> strOption 
                 (long "player" <> short 'p' <> metavar "PLAYER" <> help "Filter matches to ones with PLAYER"))
     , many
-        (Stage <$> strOption
+        (U . Stage <$> strOption
                 (long "stage" <> short 's' <> metavar "STAGE" <> help "Filter matches to ones on STAGE"))
     ]
    where timeFMT = "[yyyy-]mm-ddThh:mm[:ss][.sss]"
@@ -73,3 +85,15 @@ opts UTCTime{utctDay=day} zone local =
          replaceYear year (UTCTime d t) = let (_, curMonth, curDay) = toGregorian d
                                   in UTCTime (fromGregorian year curMonth curDay) t
             
+-- actually process the filters
+splitFilters :: [Filter] -> ([IntersectionFilter], [UnionFilter])
+splitFilters = foldr (\f (i, u) -> 
+                     case f of
+                          I f' -> (f' : i, u)
+                          U f' -> (i, f' : u)
+                ) ([], [])
+
+--filter :: [Filter] -> RoundMap -> RoundMap
+--filter [] m = m
+--filter [U]
+

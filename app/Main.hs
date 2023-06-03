@@ -10,9 +10,9 @@ import Options.Applicative
 
 import Data.Either (rights)
 
-import Salmon ( readRoundsFromNXAPIdir, toIDMap )
+import Salmon (readRoundsFromNXAPIdir, toIDMap)
 
-import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone, utcToLocalTime)
+import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone)
 import Data.Time.Format (TimeLocale, defaultTimeLocale)
 
 import qualified Boss as Boss

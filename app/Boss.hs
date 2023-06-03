@@ -20,7 +20,6 @@ import Options.Applicative
 import Salmon
 import Salmon.BossMap (BossMap)
 import qualified Salmon.BossMap as BM
-import GHC.Natural (Natural)
 
 data Flag = CSV
           | Sum
@@ -64,7 +63,7 @@ handle (BData selectedSet f) m =
              Sum  -> prettyPrintBossMap . buildSums $ selectedBosses
              Mean -> prettyPrintBossMap . avg $ selectedBosses
              Best -> prettyPrintBossMap . findMax $ selectedBosses
-             Median -> prettyPrintBossMap . median $ selectedBosses
+             Median -> prettyPrintBossMap @(Maybe Double) . median $ selectedBosses
 
 -- various helper functions to build up the handle function
 
@@ -104,14 +103,15 @@ avg :: (Integral a) => Map k (BossMap a) -> BossMap Double
 avg m = let len = M.size m
           in fmap ((/ fromIntegral len) . fromIntegral . foldr (+) 0) . BM.toStatsList $ m
 
+-- computes the median of each attribute of boss stats
 median :: (Ord a, Integral a, Num b, Fractional b) => Map k (BossMap a) -> BossMap (Maybe b)
 median = fmap (calcMedian . sort) . BM.toStatsList
     where calcMedian :: (Integral a, Ord a, Num b, Fractional b) => [a] -> Maybe b
           calcMedian [] = Nothing
           calcMedian l | odd (length l) = Just . fromIntegral $ l !! (length l `div` 2)
-                       | otherwise      = let len = length l `div` 2
+                       | otherwise      = let index = length l `div` 2
                       in Just . (\e -> fromIntegral e / 2) $ foldl' (+) (0) 
-                            [l !! len, l !! (len + 1)]
+                            [l !! index, l !! (index + 1)]
                 
 
 -- finds the largest statistic for each boss out of all the bosses
