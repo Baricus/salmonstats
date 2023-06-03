@@ -104,19 +104,19 @@ avg :: (Integral a) => Map k (BossMap a) -> BossMap Double
 avg m = let len = M.size m
           in fmap ((/ fromIntegral len) . fromIntegral . foldr (+) 0) . BM.toStatsList $ m
 
-median :: Map k (BossMap Natural) -> BossMap (Maybe Double)
+median :: (Ord a, Integral a, Num b, Fractional b) => Map k (BossMap a) -> BossMap (Maybe b)
 median = fmap (calcMedian . sort) . BM.toStatsList
-    where calcMedian :: [Natural] -> Maybe Double
+    where calcMedian :: (Integral a, Ord a, Num b, Fractional b) => [a] -> Maybe b
           calcMedian [] = Nothing
           calcMedian l | odd (length l) = Just . fromIntegral $ l !! (length l `div` 2)
                        | otherwise      = let len = length l `div` 2
-                      in Just . (\e -> fromIntegral e / 2) $ foldl' (+) (0) ([l !! len, l !! (len + 1)] :: [Natural])
+                      in Just . (\e -> fromIntegral e / 2) $ foldl' (+) (0) 
+                            [l !! len, l !! (len + 1)]
+                
 
 -- finds the largest statistic for each boss out of all the bosses
 findMax :: (Ord a) => Map k (BossMap a) -> BossMap a
-findMax = M.foldl' (BM.unionWith pickMax) BM.empty 
-    where pickMax :: (Ord a) => (BossStats a) -> (BossStats a) -> (BossStats a)
-          pickMax (BS ak atk as) (BS bk btk bs) = BS (max ak bk) (max atk btk) (max as bs)
+findMax = M.foldl' (BM.unionWith (liftA2 max)) BM.empty
 
 -- prints a boss map nicely, 5 lines per boss counting empty lines for spacing
 prettyPrintBossMap :: (Show a) => BossMap a -> [Text]

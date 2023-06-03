@@ -25,7 +25,7 @@ common shared
     default-language: GHC2021 
     build-depends:    base ^>=4.18.0.0, aeson, text, containers, vector, time, bytestring, directory
 
-    default-extensions: LambdaCase, OverloadedStrings, OverloadedLists
+    default-extensions: LambdaCase, OverloadedStrings
     ghc-options: -Wall
 
 library salmonrun
@@ -39,10 +39,10 @@ library salmonrun
 executable salmonstats
     import: shared
 
-    main-is:          Main.hs
+    main-is: Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules: Boss
+    other-modules: Boss, Filters
 
     -- LANGUAGE extensions used by modules in this package.
     build-depends:    salmonrun, optparse-applicative, cassava
