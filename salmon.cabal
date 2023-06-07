@@ -32,7 +32,7 @@ library salmonrun
   import: shared
 
   hs-source-dirs: salmon
-  exposed-modules: Salmon, Salmon.NintendoJSON, Salmon.Boss, Salmon.BossMap, Salmon.WaterLevel, Salmon.Wave, Salmon.Round
+  exposed-modules: Salmon, Salmon.NintendoJSON, Salmon.Boss, Salmon.WaterLevel, Salmon.Wave, Salmon.Round, Salmon.King, Salmon.StatMap, Textworthy
 
   other-modules: 
 
@@ -42,7 +42,7 @@ executable salmonstats
     main-is: Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules: Boss, Filters
+    other-modules: Boss, Filters, King, Util.StatMap
 
     -- LANGUAGE extensions used by modules in this package.
     build-depends:    salmonrun, optparse-applicative, cassava
