@@ -2,7 +2,9 @@ module Salmon (
     module Salmon.Round,
     module Salmon.Wave,
     module Salmon.Boss,
+    module Salmon.King,
     module Salmon.WaterLevel,
+    module Textworthy,
 
     -- functions to parse nxapi data into Rounds objects
     readRoundFromNintendoFile,
@@ -12,8 +14,10 @@ module Salmon (
 import Salmon.Round
 import Salmon.Wave
 import Salmon.Boss
+import Salmon.King
 import Salmon.WaterLevel
 
+import Textworthy
 import Salmon.NintendoJSON ( readNintendoJSONFile )
 
 import System.Directory ( listDirectory )

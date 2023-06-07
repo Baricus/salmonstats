@@ -3,16 +3,12 @@ module Salmon.Boss (
     Boss(..),
     -- Player statistics relating to a boss
     BossStats(..),
-    -- Helper functions to convert between bosses and official name strings
-    bossToText,
-    textToBoss,
     -- Helper functions to work with boss objects
     sumBossStats,
-    -- * King salmonoids
-    King(..),
     ) where
 
 import Salmon.NintendoJSON
+import Textworthy
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -49,26 +45,26 @@ instance FromJSONKey Boss where
 
 instance FromJSON Boss where
 
--- this one is more general to allow any output!
-bossToText :: IsString a => Boss -> a
-bossToText = \cases
-    SteelEel       -> "Steel Eel"
-    FishStick      -> "Fish Stick"
-    FlipperFlopper -> "Flipper-Flopper"
-    SlamminLid     -> "Slammin' Lid"
-    BigShot        -> "Big Shot"
-    -- take advantage of the default show since it matches our names
-    b              -> fromString . show $ b
+instance Textworthy Boss where
+    toText :: IsString a => Boss -> a
+    toText = \cases
+        SteelEel       -> "Steel Eel"
+        FishStick      -> "Fish Stick"
+        FlipperFlopper -> "Flipper-Flopper"
+        SlamminLid     -> "Slammin' Lid"
+        BigShot        -> "Big Shot"
+        -- take advantage of the default show since it matches our names
+        b              -> fromString . show $ b
 
-textToBoss :: Text -> Maybe Boss
-textToBoss = \cases
-    "Steel Eel"       -> Just SteelEel
-    "Fish Stick"      -> Just FishStick
-    "Flipper-Flopper" -> Just FlipperFlopper
-    "Slammin' Lid"    -> Just SlamminLid
-    "Big Shot"        -> Just BigShot
-    -- take advantage of the default read instance since they match our names
-    t                 -> readMaybe . T.unpack $ t
+    fromText :: Text -> Maybe Boss
+    fromText = \cases
+        "Steel Eel"       -> Just SteelEel
+        "Fish Stick"      -> Just FishStick
+        "Flipper-Flopper" -> Just FlipperFlopper
+        "Slammin' Lid"    -> Just SlamminLid
+        "Big Shot"        -> Just BigShot
+        -- take advantage of the default read instance since they match our names
+        t                 -> readMaybe . T.unpack $ t
 
 -- The 3 pieces of data we get about a boss after a round
 data BossStats a = BS
@@ -101,38 +97,3 @@ instance Applicative BossStats where
 
 sumBossStats :: (Num a) => BossStats a -> BossStats a -> BossStats a
 sumBossStats (BS k tk s) (BS k' tk' s') = BS (k + k') (tk + tk') (s + s')
-
-
--- King salmonoids!
-data King = K
-          {
-              name   :: Text
-            , killed :: Bool
-            , bronze :: Natural
-            , silver :: Natural
-            , gold   :: Natural
-          }
-        deriving (Show, Generic)
-
-instance ToJSON King where
-    toEncoding = genericToEncoding defaultOptions
-
-instance FromJSON King where
-
--- parses this from the root object so we can grab the two relevant pieces
---
--- This is a bit weird, but it alowws us to combine the two pieces of data
--- (boss and scales) into one object that either exists or doesn't
--- rather than two
-instance FromNintendoJSON King where
-    parseNJSON = withObject "result" $ \obj -> do
-        -- these are optional in the Nintendo JSON, but we parse it anyways
-        bossRes <- obj .: "bossResult"
-        scales  <- obj .: "scale"
-
-        -- construct our final object
-        K <$> (bossRes .: "boss" >>= (.: "name"))
-          <*> bossRes .: "hasDefeatBoss"
-          <*> scales  .: "bronze"
-          <*> scales  .: "silver"
-          <*> scales  .: "gold"

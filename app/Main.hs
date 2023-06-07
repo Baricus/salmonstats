@@ -8,7 +8,7 @@ import qualified Data.Set as S
 
 import Options.Applicative
 
-import Data.Either (rights)
+import Data.Either (rights, partitionEithers)
 
 import Salmon (readRoundsFromNXAPIdir, toIDMap)
 
@@ -16,12 +16,13 @@ import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone)
 import Data.Time.Format (TimeLocale, defaultTimeLocale)
 
 import qualified Boss as Boss
+import qualified King as King
 
 import qualified Filters as Filters
 
 
 data Command = Bosses Boss.Data
-              | Kings (Set Text)
+             | Kings King.Data
             deriving (Show)
 
 data Args = A
@@ -30,14 +31,11 @@ data Args = A
           , comm    :: Command
           }
 
-kingCmd :: Parser Command
-kingCmd = Kings . S.fromList 
-            <$> many (argument str (metavar "KING NAMES..." <> help "List of kings to print statistics on or nothing for all kings"))
 
-opts :: Parser Command
-opts = subparser
+commands :: Parser Command
+commands = subparser
         (  command "bosses" (info (helper <*> (Bosses <$> Boss.command)) (progDesc "Prints out boss kills for requested bosses"))
-        <> command "kings"  (info (helper <*> kingCmd) (progDesc "Prints out stats for kings"))
+        <> command "kings"  (info (helper <*> (Kings <$> King.command)) (progDesc "Prints out stats for kings"))
         )
 
 argParser :: UTCTime -> TimeZone -> TimeLocale -> ParserInfo Args
@@ -45,7 +43,7 @@ argParser time zone local = info (helper <*>
                  -- TODO: change default to nxapi data directory (and move my data over)
                  (A <$> strOption (value "splatnet3" <> showDefault <> metavar "DIRECTORY" <> long "dir" <> short 'd' <> help "Directory which contains the nxapi salmon run results") 
                     <*> Filters.opts time zone local
-                    <*> opts))
+                    <*> commands))
                  (fullDesc <> progDesc "Outputs various salmon run stats")
 
 -- format notes:
@@ -64,10 +62,11 @@ main = do
     --let localTime = utcToLocalTime zone time
 
     A {dataDir=dir, filters=filt, comm=comm} <- execParser $ argParser time zone defaultTimeLocale
-    rounds <- toIDMap . rights <$> readRoundsFromNXAPIdir dir
+    (errors, rounds) <- fmap toIDMap . partitionEithers <$> readRoundsFromNXAPIdir dir
+    mapM_ print errors
     let filteredRounds = Filters.filterRounds filt rounds
     print filt
     print $ length filteredRounds
     mapM_ T.putStrLn $ case comm of
             (Bosses bdata) -> Boss.handle bdata filteredRounds
-            (Kings  _) -> error "not implemented!"
+            (Kings  kdata) -> King.handle kdata filteredRounds

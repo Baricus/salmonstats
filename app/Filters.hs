@@ -105,6 +105,7 @@ fromPred = \cases
     (TimeAfter t)  -> ((> t) . time)
     (Any)          -> const True
 
+-- collapses a boolean filter to a single function
 fromFilters :: Filter (Round -> Bool) -> (Round -> Bool)
 fromFilters = \cases
     (P p)     -> p

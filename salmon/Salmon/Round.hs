@@ -9,9 +9,14 @@ module Salmon.Round (
     isTeammate,
     ) where
 
+import Debug.Trace
+
 import Salmon.NintendoJSON
+import Textworthy
+
 import Salmon.Boss
-import Salmon.BossMap (BossMap(..))
+import Salmon.StatMap (StatMap(..))
+import Salmon.King
 import Salmon.Wave
 
 import Data.Text (Text)
@@ -25,7 +30,7 @@ import qualified Data.Map as M
 import GHC.Generics ( Generic )
 import GHC.Natural ( Natural ) 
 
-import Control.Applicative ( Alternative((<|>))) 
+import Control.Applicative ( Alternative((<|>)), liftA) 
 
 import Data.Time ( UTCTime )
 
@@ -62,8 +67,8 @@ data Round = CR
                  , rescues       :: Natural
                  , deaths        :: Natural
                  , waves         :: Vector WaveStats
-                 , bosses        :: BossMap Natural -- not all bosses are present always
-                 , king          :: Maybe King
+                 , bosses        :: StatMap Boss BossStats Natural -- not all bosses are present always
+                 , king          :: StatMap King KingStats Natural -- singleton or empty map
                  , nextHist      :: Maybe GameID -- not always present, but useful when they are
                  , prevHist      :: Maybe GameID
                }
@@ -123,14 +128,14 @@ instance FromNintendoJSON Round where
                             -- complex transform to turn bosses into the Haskell data counterparts
                             -- translating the string representations
                             M.insert
-                            <$> (statObj .: "enemy" >>= getName >>= maybe (fail "Unknown Boss") pure . textToBoss :: Parser Boss) 
+                            <$> (statObj .: "enemy" >>= getName >>= maybe (fail "Unknown Boss") pure . fromText :: Parser Boss) 
                             <*> (parseNJSON val :: Parser (BossStats Natural))
                             <*> m)
                         val)
                     (pure M.empty) :: Parser (Map Boss (BossStats Natural))
 
         -- we either parse the king or just give nothing back since it wasn't present
-        king <- (fmap Just (parseNJSON (Object res)) <|> pure Nothing)
+        king <- ((liftA (uncurry M.singleton) (parseNJSON (Object res))) <|> pure M.empty)
 
         next <- res .:? "nextHistoryDetail" >>= traverse (.: "id")
         prev <- res .:? "previousHistoryDetail" >>= traverse (.: "id")
@@ -142,7 +147,7 @@ instance FromNintendoJSON Round where
                   eggs eggAssists 
                   rescues deaths 
                   waves 
-                  (BossMap bosses) king
+                  (StatMap bosses) (StatMap king)
                   next prev
 
 -- helper/util functions
