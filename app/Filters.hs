@@ -64,9 +64,9 @@ opts UTCTime{utctDay=day} zone local =
             let (startYear, _, _) = toGregorian day
                 in asum -- whichever one passes
             -- assume current day if not given a day (replace offset (utctDayTime) only)
-            [ UTCTime day . utctDayTime . localTimeToUTC zone <$> parseTimeM False local "%H" timeStr
-            , UTCTime day . utctDayTime . localTimeToUTC zone <$> parseTimeM False local "%R" timeStr
-            , UTCTime day . utctDayTime . localTimeToUTC zone <$> parseTimeM False local "%T" timeStr
+            [ UTCTime day . utctDayTime . localTimeToUTC zone <$> parseTimeM True local "%H" timeStr
+            , UTCTime day . utctDayTime . localTimeToUTC zone <$> parseTimeM True local "%R" timeStr
+            , UTCTime day . utctDayTime . localTimeToUTC zone <$> parseTimeM True local "%T" timeStr
             -- assume current year if not given a year
             , replaceYear startYear . localTimeToUTC zone <$> parseTimeM True local "%m-%dT%T" timeStr
             , replaceYear startYear . localTimeToUTC zone <$> parseTimeM True local "%m-%d_%T" timeStr
@@ -77,15 +77,15 @@ opts UTCTime{utctDay=day} zone local =
             , replaceYear startYear . localTimeToUTC zone <$> parseTimeM True local "%m-%d" timeStr
             , replaceYear startYear . localTimeToUTC zone <$> parseTimeM True local "%m-%d" timeStr
             -- if given full day and partial/no time, replace missing info with 00:00:00 as needed
-            , localTimeToUTC zone <$> parseTimeM False local "%Y-%m-%dT%R" timeStr
-            , localTimeToUTC zone <$> parseTimeM False local "%Y-%m-%d_%R" timeStr
-            , localTimeToUTC zone <$> parseTimeM False local "%Y-%m-%dT%H" timeStr
-            , localTimeToUTC zone <$> parseTimeM False local "%Y-%m-%d_%H" timeStr
-            , localTimeToUTC zone <$> parseTimeM False local "%Y-%m-%d" timeStr
-            , localTimeToUTC zone <$> parseTimeM False local "%Y-%m-%d" timeStr
+            , localTimeToUTC zone <$> parseTimeM True local "%Y-%m-%dT%R" timeStr
+            , localTimeToUTC zone <$> parseTimeM True local "%Y-%m-%d_%R" timeStr
+            , localTimeToUTC zone <$> parseTimeM True local "%Y-%m-%dT%H" timeStr
+            , localTimeToUTC zone <$> parseTimeM True local "%Y-%m-%d_%H" timeStr
+            , localTimeToUTC zone <$> parseTimeM True local "%Y-%m-%d" timeStr
+            , localTimeToUTC zone <$> parseTimeM True local "%Y-%m-%d" timeStr
             -- if given everything, just convert
-            , localTimeToUTC zone <$> parseTimeM False local "%Y-%m-%dT%T" timeStr
-            , localTimeToUTC zone <$> parseTimeM False local "%Y-%m-%d_%T" timeStr
+            , localTimeToUTC zone <$> parseTimeM True local "%Y-%m-%dT%T" timeStr
+            , localTimeToUTC zone <$> parseTimeM True local "%Y-%m-%d_%T" timeStr
             ]
         -- clips invalid values
          replaceYear year (UTCTime d t) = let (_, curMonth, curDay) = toGregorian d
