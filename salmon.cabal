@@ -32,7 +32,7 @@ library salmonrun
   import: shared
 
   hs-source-dirs: salmon
-  exposed-modules: Salmon, Salmon.NintendoJSON, Salmon.Boss, Salmon.WaterLevel, Salmon.Wave, Salmon.Round, Salmon.King, Salmon.StatMap, Textworthy
+  exposed-modules: Salmon, Salmon.NintendoJSON, Salmon.Boss, Salmon.WaterLevel, Salmon.Wave, Salmon.Round, Salmon.Shift, Salmon.King, Salmon.StatMap, Textworthy
 
   other-modules: 
 

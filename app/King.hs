@@ -6,7 +6,7 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import Data.Map (Map)
+--import Data.Map (Map)
 import qualified Data.Map as M
 
 import Options.Applicative
@@ -45,8 +45,8 @@ handle (KData selected flg) m =
         selectedKings  = M.filter (not . SM.null) . M.map ((`SM.restrictKeys` selectedSet') . king) $ m
     in
         case flg of
-             Sum  -> prettyPrintKingMap . statMapsSum $ selectedKings
-             _ -> undefined
+             Sum -> prettyPrintKingMap . statMapsSum $ selectedKings
+             _   -> prettyPrintWinRate . fmap (\l -> fromIntegral (sum l) / fromIntegral (length l)) . (SM.toMap $ killed) . SM.toStatsList $ selectedKings 
 
 prettyPrintKingMap :: Show a => StatMap King KingStats a -> [Text]
 prettyPrintKingMap = SM.foldMapWithKey buildLine
@@ -58,4 +58,15 @@ prettyPrintKingMap = SM.foldMapWithKey buildLine
             ,   "\t  gold: " <> packShow g
             ,   "" -- empty line
             ]
-          packShow = T.pack . show
+
+
+prettyPrintWinRate :: M.Map King Double -> [Text]
+prettyPrintWinRate = M.foldMapWithKey buildLine
+    where buildLine king avg =
+              [ toText king
+              , "\tWinrate: " <> packShow avg
+              , ""
+              ]
+
+packShow :: (Show a) => a -> Text
+packShow = T.pack . show

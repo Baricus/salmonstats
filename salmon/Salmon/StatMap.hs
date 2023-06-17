@@ -20,6 +20,8 @@ module Salmon.StatMap (
     foldl',
     -- converting a functor of StatMaps into a single statmap containing [a]
     toStatsList,
+    -- reduce down to a normal map, collapsing the s a to a normal type
+    toMap,
     -- remove keys from a statmap
     restrictKeys,
     -- filter values from a statmap
@@ -89,6 +91,10 @@ foldMapWithKey f = liftMapToStatMap $ M.foldMapWithKey f
 -- convert a foldable of maps to a Map of foldables
 toStatsList :: (Applicative s, Ord k) =>  (Foldable f, Functor f) => f (StatMap k s a) -> StatMap k s [a]
 toStatsList = Prelude.foldr (unionWith (liftA2 (<>))) empty . ((fmap . fmap) $ pure)
+
+-- reduce to a normal map
+toMap :: (s a -> b) -> StatMap k s a -> Map k b
+toMap = liftMapToStatMap . fmap
 
 -- builder functions
 empty :: StatMap k s a

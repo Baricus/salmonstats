@@ -5,11 +5,12 @@ module Salmon.Round (
     GameID, RoundMap,
     -- Functions for managing round maps
     toIDMap, getIDs, nextRound, prevRound,
+    -- functions to parse nxapi data into Rounds objects
+    readRoundFromNintendoFile,
+    readRoundsFromNXAPIdir,
     -- Helper functions for working with Rounds
     isTeammate,
     ) where
-
-import Debug.Trace
 
 import Salmon.NintendoJSON
 import Textworthy
@@ -37,6 +38,9 @@ import Data.Time ( UTCTime )
 import Data.Aeson
 import Data.Aeson.Types ( Parser )
 import Data.List (sortOn)
+
+import System.Directory ( listDirectory )
+import Data.List (isPrefixOf)
 
 type GameID = Text
 type RoundMap = Map GameID Round
@@ -149,6 +153,19 @@ instance FromNintendoJSON Round where
                   waves 
                   (StatMap bosses) (StatMap king)
                   next prev
+
+-- direct parser functions
+readRoundFromNintendoFile :: FilePath -> IO (Either String Round)
+readRoundFromNintendoFile = readNintendoJSONFile
+
+readRoundsFromNXAPIdir :: FilePath -> IO [Either String Round]
+readRoundsFromNXAPIdir folder = do
+    paths <- listDirectory folder
+    -- only grab the files that are coop results
+    let filtered  = filter (isPrefixOf "splatnet3-coop-result-u") paths
+        fullpaths = ((folder <> "/") <>) <$> filtered
+    -- read all the files in that folder
+    mapM readRoundFromNintendoFile fullpaths
 
 -- helper/util functions
 isTeammate :: Text -> Round -> Bool
