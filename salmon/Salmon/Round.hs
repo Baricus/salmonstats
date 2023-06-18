@@ -45,8 +45,10 @@ import Data.List (isPrefixOf)
 type GameID = Text
 type RoundMap = Map GameID Round
 
-data GameResult = Won -- beat all 3-4 waves
+data GameResult 
+         = Won -- beat all 3-4 waves
          | Loss Natural -- final wave number
+         | Disconnect
     deriving (Show, Generic)
 
 instance ToJSON GameResult where
@@ -65,7 +67,7 @@ data Round = CR
                  , team          :: Vector Text -- TODO: decide if this should be more info or not
                  , playedWeapons :: Vector Text
                  , allWeapons    :: Vector Text
-                 , special       :: Text
+                 , special       :: Maybe Text
                  , eggs          :: Natural
                  , eggAssists    :: Natural
                  , rescues       :: Natural
@@ -109,7 +111,10 @@ instance FromNintendoJSON Round where
         gameID     <- res .: "id"
         time       <- res .: "playedTime"
         stage      <- res .: "coopStage" >>= getName
-        gameResult <- (\i -> if i == 0 then Won else Loss i) <$> res .: "resultWave"
+        gameResult <- (\case (i :: Integer) | i == (-1) -> Disconnect -- -1 is used for disconnects
+                                            | i == 0    -> Won
+                                            | otherwise -> Loss . fromIntegral $ i) <$> res .: "resultWave"
+        
         hazard     <- res .: "dangerRate"
         username   <- myRes .: "player" >>= getName
         team       <- res .: "memberResults" >>= withArray "MemberResults" 
@@ -118,7 +123,7 @@ instance FromNintendoJSON Round where
         pWeapons   <- myRes .: "weapons" >>= withArray "my weapons" (traverse (withObject "weapon" getName))
         aWeapons   <- res .: "weapons" >>= withArray "weapons" (traverse (withObject "weapon" getName))
 
-        special    <- myRes .: "specialWeapon" >>= getName
+        special    <- (myRes .: "specialWeapon" >>= fmap Just . getName) <|> pure Nothing
         eggs       <- myRes .: "goldenDeliverCount"
         eggAssists <- myRes .: "goldenAssistCount"
         rescues    <- myRes .: "rescueCount"
