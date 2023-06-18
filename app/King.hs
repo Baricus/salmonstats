@@ -45,8 +45,9 @@ handle (KData selected flg) m =
         selectedKings  = M.filter (not . SM.null) . M.map ((`SM.restrictKeys` selectedSet') . king) $ m
     in
         case flg of
-             Sum -> prettyPrintKingMap . statMapsSum $ selectedKings
-             _   -> prettyPrintWinRate . fmap (\l -> fromIntegral (sum l) / fromIntegral (length l)) . (SM.toMap $ killed) . SM.toStatsList $ selectedKings 
+             Sum     -> prettyPrintKingMap . statMapsSum $ selectedKings
+             WinRate -> prettyPrintWinRate . fmap (\l -> fromIntegral (sum l) / fromIntegral (length l)) . (SM.toMap $ killed) . SM.toStatsList $ selectedKings 
+             _       -> pure $ error "Not currently implemented!"
 
 prettyPrintKingMap :: Show a => StatMap King KingStats a -> [Text]
 prettyPrintKingMap = SM.foldMapWithKey buildLine
@@ -58,7 +59,6 @@ prettyPrintKingMap = SM.foldMapWithKey buildLine
             ,   "\t  gold: " <> packShow g
             ,   "" -- empty line
             ]
-
 
 prettyPrintWinRate :: M.Map King Double -> [Text]
 prettyPrintWinRate = M.foldMapWithKey buildLine
