@@ -1,14 +1,10 @@
 module Main where
 
-import Data.Text (Text)
 import qualified Data.Text.IO as T
-
-import Data.Set (Set)
-import qualified Data.Set as S
 
 import Options.Applicative
 
-import Data.Either (rights, partitionEithers)
+import Data.Either (partitionEithers)
 
 import Salmon (readRoundsFromNXAPIdir, toIDMap)
 
@@ -56,17 +52,17 @@ argParser time zone local = info (helper <*>
 
 main :: IO ()
 main = do
-    -- get time info to pass on
+    -- get time info to pass on to the parser
     time <- getCurrentTime
     zone <- getCurrentTimeZone
-    --let localTime = utcToLocalTime zone time
-
     A {dataDir=dir, filters=filt, comm=comm} <- execParser $ argParser time zone defaultTimeLocale
+    -- read in all the data
     (errors, rounds) <- fmap toIDMap . partitionEithers <$> readRoundsFromNXAPIdir dir
+    -- print any errors we find
     mapM_ print errors
+    -- filter rounds
     let filteredRounds = Filters.filterRounds filt rounds
-    print filt
-    print $ length filteredRounds
+    -- handle whatever command is given on the command line
     mapM_ T.putStrLn $ case comm of
             (Bosses bdata) -> Boss.handle bdata filteredRounds
             (Kings  kdata) -> King.handle kdata filteredRounds
