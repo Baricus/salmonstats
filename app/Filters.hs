@@ -26,6 +26,7 @@ data Pred = Player Text
           | TimeBefore UTCTime
           | TimeAfter UTCTime
           | Any  -- always true
+          | Negate Pred
         deriving (Read, Show, Eq, Ord)
 
 -- generic in the filter to allow for transformations!
@@ -54,12 +55,16 @@ opts UTCTime{utctDay=day} zone local =
             (long "after" <> short 'a' <> metavar timeFMT <> help "Filter matches before this time"))
     , (Player 
             <$> strOption 
-                (long "player" <> short 'p' <> metavar "PLAYER" <> help "Filter matches to ones with PLAYER"))
-    , (Stage <$> strOption
+                (long "player" <> short 'p' <> metavar "PLAYER" <> help "Filter matches to ones with PLAYER as a teammate"))
+    , (Negate . Player 
+            <$> strOption
+                (long "not-player" <> metavar "PLAYER" <> help "Filter matches to ones without PLAYER as a teammate"))
+    , (Stage 
+            <$> strOption
                 (long "stage" <> short 's' <> metavar "STAGE" <> help "Filter matches to ones on STAGE"))
     ])
    where timeFMT = "[[yyyy-]mm-dd]_hh[:mm[[:ss]]]"
-         -- so many time formats...
+         -- so many time formats in timeFMT...
          parseTime timeStr = 
             let (startYear, _, _) = toGregorian day
                 in asum -- whichever one passes
@@ -104,6 +109,7 @@ fromPred = \cases
     (TimeBefore t) -> ((< t) . time)
     (TimeAfter t)  -> ((> t) . time)
     (Any)          -> const True
+    (Negate p)     -> liftA not $ fromPred p
 
 -- collapses a boolean filter to a single function
 fromFilters :: Filter (Round -> Bool) -> (Round -> Bool)
