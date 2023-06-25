@@ -2,11 +2,13 @@ module Main where
 
 import qualified Data.Text.IO as T
 
+import qualified Data.Set as S
+
 import Options.Applicative
 
 import Data.Either (partitionEithers)
 
-import Salmon (readRoundsFromNXAPIdir, toIDMap)
+import Salmon (readRoundsFromNXAPIdir, toIDMap, readShiftsFromNXAPIdir, shiftInfo)
 
 import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone)
 import Data.Time.Format (TimeLocale, defaultTimeLocale)
@@ -60,6 +62,11 @@ main = do
     (errors, rounds) <- fmap toIDMap . partitionEithers <$> readRoundsFromNXAPIdir dir
     -- print any errors we find
     mapM_ print errors
+    -- also read in the shifts
+    (errors', shifts) <- partitionEithers <$> readShiftsFromNXAPIdir dir
+    mapM_ print errors'
+
+    mapM_ print . (fmap . fmap) shiftInfo . fmap S.toList $ shifts
     -- filter rounds
     let filteredRounds = Filters.filterRounds filt rounds
     -- handle whatever command is given on the command line
