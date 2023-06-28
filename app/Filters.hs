@@ -71,8 +71,6 @@ opts UTCTime{utctDay=day} zone local =
                            (long "stage" <> short 's' <> metavar "STAGE" <> help "Filter matches to ones on STAGE")
                 ]
             )
-
-
    where timeFMT = "[[yyyy-]mm-dd]_hh[:mm[[:ss]]]"
          -- so many time formats in timeFMT...
          parseTime timeStr = 

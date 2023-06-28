@@ -2,8 +2,6 @@ module Main where
 
 import qualified Data.Text.IO as T
 
-import qualified Data.Set as S
-
 import Options.Applicative
 
 import Data.Either (partitionEithers)
@@ -17,9 +15,6 @@ import qualified Boss as Boss
 import qualified King as King
 
 import qualified Filters as Filters
-
-import qualified Data.Map as M
-
 
 data Command = Bosses Boss.Data
              | Kings King.Data
