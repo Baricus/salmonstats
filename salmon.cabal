@@ -1,4 +1,4 @@
-cabal-version:      2.4
+cabal-version:      3.0
 name:               salmonstats
 version:            0.1.0.0
 
@@ -26,7 +26,8 @@ common shared
     build-depends:    base ^>=4.18.0.0, aeson, text, containers, vector, time, bytestring, directory
 
     default-extensions: LambdaCase, OverloadedStrings
-    ghc-options: -Wall
+    ghc-options: -Wall -funbox-small-strict-fields -O2
+
 
 library salmonrun
   import: shared
