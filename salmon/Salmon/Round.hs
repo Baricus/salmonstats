@@ -2,12 +2,14 @@ module Salmon.Round (
     -- All statistics about a single round of Salmon Run
     Round(..),
     GameResult(..),
-    GameID, RoundMap,
+    RoundMap,
     -- Functions for managing round maps
     toIDMap, getIDs, nextRound, prevRound,
     -- functions to parse nxapi data into Rounds objects
     readRoundFromNintendoFile,
     readRoundsFromNXAPIdir,
+    -- join in extra shift data
+    addShiftData,
     -- Helper functions for working with Rounds
     isTeammate,
     ) where
@@ -27,6 +29,7 @@ import qualified Data.Vector as V
 
 import Data.Map (Map)
 import qualified Data.Map as M
+import qualified Data.Map.Merge.Strict as M
 
 import GHC.Generics ( Generic )
 import GHC.Natural ( Natural ) 
@@ -37,12 +40,12 @@ import Data.Time ( UTCTime )
 
 import Data.Aeson
 import Data.Aeson.Types ( Parser )
-import Data.List (sortOn)
 
 import System.Directory ( listDirectory )
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf, sortOn)
 
-type GameID = Text
+import Salmon.Shift ( Shift, GameID ) 
+
 type RoundMap = Map GameID Round
 
 data GameResult 
@@ -61,6 +64,7 @@ data Round = CR
                    gameID        :: Text
                  , time          :: UTCTime
                  , stage         :: Text
+                 , shift         :: Maybe Shift
                  , result        :: GameResult
                  , hazard        :: Double
                  , player        :: Text
@@ -150,7 +154,8 @@ instance FromNintendoJSON Round where
         prev <- res .:? "previousHistoryDetail" >>= traverse (.: "id")
 
         -- man, this is an object       
-        pure $ CR gameID time stage gameResult hazard 
+        pure $ CR gameID time stage Nothing -- shift data is grabbed from other files and combined
+                  gameResult hazard 
                   username team 
                   pWeapons aWeapons special 
                   eggs eggAssists 
@@ -171,6 +176,12 @@ readRoundsFromNXAPIdir folder = do
         fullpaths = ((folder <> "/") <>) <$> filtered
     -- read all the files in that folder
     mapM readRoundFromNintendoFile fullpaths
+
+-- combine a GameID -> Shift map and a GameID -> Round Map
+-- We drop any extra keys in the shift map, but keep any in the round map.
+-- Thus, some Rounds may not have shifts, but only if we didn't have the data for them
+addShiftData :: Map GameID Shift -> Map GameID Round -> Map GameID Round
+addShiftData = M.merge M.dropMissing M.preserveMissing' $ M.zipWithMatched (\_ s r -> r {shift=Just s})
 
 -- helper/util functions
 isTeammate :: Text -> Round -> Bool

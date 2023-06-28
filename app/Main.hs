@@ -8,7 +8,7 @@ import Options.Applicative
 
 import Data.Either (partitionEithers)
 
-import Salmon (readRoundsFromNXAPIdir, toIDMap, readShiftsFromNXAPIdir, shiftInfo)
+import Salmon (readRoundsFromNXAPIdir, toIDMap, readShiftsFromNXAPIdir, toIDShiftMap, addShiftData)
 
 import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone)
 import Data.Time.Format (TimeLocale, defaultTimeLocale)
@@ -18,15 +18,17 @@ import qualified King as King
 
 import qualified Filters as Filters
 
+import qualified Data.Map as M
+
 
 data Command = Bosses Boss.Data
              | Kings King.Data
             deriving (Show)
 
 data Args = A
-          { dataDir :: FilePath
-          , filters :: Filters.Data
-          , comm    :: Command
+          { dataDir     :: FilePath
+          , filters     :: Filters.Data
+          , comm        :: Command
           }
 
 
@@ -58,15 +60,14 @@ main = do
     time <- getCurrentTime
     zone <- getCurrentTimeZone
     A {dataDir=dir, filters=filt, comm=comm} <- execParser $ argParser time zone defaultTimeLocale
-    -- read in all the data
-    (errors, rounds) <- fmap toIDMap . partitionEithers <$> readRoundsFromNXAPIdir dir
+    -- read in the shifts
+    (sErrors, shifts) <- fmap toIDShiftMap . partitionEithers <$> readShiftsFromNXAPIdir dir
+    mapM_ print sErrors
+    -- read in all the game data and add in the shift information
+    (rErrors, rounds) <- fmap (addShiftData shifts . toIDMap) . partitionEithers <$> readRoundsFromNXAPIdir dir
     -- print any errors we find
-    mapM_ print errors
-    -- also read in the shifts
-    (errors', shifts) <- partitionEithers <$> readShiftsFromNXAPIdir dir
-    mapM_ print errors'
+    mapM_ print rErrors
 
-    mapM_ print . (fmap . fmap) shiftInfo . fmap S.toList $ shifts
     -- filter rounds
     let filteredRounds = Filters.filterRounds filt rounds
     -- handle whatever command is given on the command line
