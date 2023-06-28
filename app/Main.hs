@@ -6,31 +6,28 @@ import Options.Applicative
 
 import Data.Either (partitionEithers)
 
-import Salmon (readRoundsFromNXAPIdir, toIDMap, readShiftsFromNXAPIdir, toIDShiftMap, addShiftData)
+import Salmon (readRoundsFromNXAPIdir, toIDMap, readShiftsFromNXAPIdir, toIDShiftMap, addShiftData, RoundMap)
 
 import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone)
 import Data.Time.Format (TimeLocale, defaultTimeLocale)
 
-import qualified Boss as Boss
-import qualified King as King
-
 import qualified Filters as Filters
 
-data Command = Bosses Boss.Data
-             | Kings King.Data
-            deriving (Show)
+import Boss 
+import King 
+import Data.Text (Text)
+import Command (buildCommand)
 
 data Args = A
           { dataDir     :: FilePath
           , filters     :: Filters.Data
-          , comm        :: Command
+          , tuiCommand  :: RoundMap -> [Text]
           }
 
-
-commands :: Parser Command
+commands :: Parser (RoundMap -> [Text])
 commands = subparser
-        (  command "bosses" (info (helper <*> (Bosses <$> Boss.command)) (progDesc "Prints out boss kills for requested bosses"))
-        <> command "kings"  (info (helper <*> (Kings <$> King.command)) (progDesc "Prints out stats for kings"))
+        (  buildCommand "bosses" Boss.parseCommand "Prints out boss kills for requested bosses"
+        <> buildCommand "kings"  King.parseCommand "Prints out stats for kings"
         )
 
 argParser :: UTCTime -> TimeZone -> TimeLocale -> ParserInfo Args
@@ -54,7 +51,7 @@ main = do
     -- get time info to pass on to the parser
     time <- getCurrentTime
     zone <- getCurrentTimeZone
-    A {dataDir=dir, filters=filt, comm=comm} <- execParser $ argParser time zone defaultTimeLocale
+    A {dataDir=dir, filters=filt, tuiCommand=execCommand} <- execParser $ argParser time zone defaultTimeLocale
     -- read in the shifts
     (sErrors, shifts) <- fmap toIDShiftMap . partitionEithers <$> readShiftsFromNXAPIdir dir
     mapM_ print sErrors
@@ -66,6 +63,4 @@ main = do
     -- filter rounds
     let filteredRounds = Filters.filterRounds filt rounds
     -- handle whatever command is given on the command line
-    mapM_ T.putStrLn $ case comm of
-            (Bosses bdata) -> Boss.handle bdata filteredRounds
-            (Kings  kdata) -> King.handle kdata filteredRounds
+    mapM_ T.putStrLn $ execCommand filteredRounds

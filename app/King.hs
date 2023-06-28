@@ -1,4 +1,6 @@
-module King where
+module King (
+    parseCommand
+    ) where
 
 import Data.Set (Set)
 import qualified Data.Set as S
@@ -27,8 +29,11 @@ data Flag = CSV
 data Data = KData (Set King) Flag
     deriving (Show)
 
-command :: Parser Data
-command = KData . S.fromList 
+parseCommand :: Parser (RoundMap -> [Text])
+parseCommand = handle <$> parser
+
+parser :: Parser Data
+parser = KData . S.fromList 
         <$> many
                 (argument (maybeReader readMaybe) (metavar "KING_NAMES..." <> help "A list of kings to filter for"))
         <*> 
@@ -36,6 +41,7 @@ command = KData . S.fromList
           <|> flag' Sum  (long "sum" <> short 's' <> help "Sum boss stats per boss to display")
           <|> flag' WinRate (long "winrate" <> short 'w' <> help "win rate against selected bosses")
         )
+
 
 handle :: Data -> RoundMap -> [Text]
 handle (KData selected flg) m =

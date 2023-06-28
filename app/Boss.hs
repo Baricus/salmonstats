@@ -1,5 +1,5 @@
 module Boss (
-        Boss.command, handle, Data
+        parseCommand
     ) where
 
 import Data.Set (Set)
@@ -10,8 +10,6 @@ import qualified Data.Text as T
 
 import Data.Map (Map)
 import qualified Data.Map as M
-
-import Data.List ( sort, foldl' )
 
 import Text.Read (readMaybe)
 
@@ -34,8 +32,11 @@ data Flag = CSV
 data Data = BData (Set Boss) Flag
                 deriving (Show)
 
-command :: Parser Data
-command = BData 
+parseCommand :: Parser (RoundMap -> [Text])
+parseCommand = handle <$> parser
+
+parser :: Parser Data
+parser = BData 
             -- build our set
             . S.fromList 
             <$> many (argument 
@@ -51,6 +52,7 @@ command = BData
                 <|> flag' Median (long "median" <> help "Compute median per boss statistic")
                 <|> flag' Best (long "best" <> short 'b' <> help "display the best stats for each boss across selected games (best kills, best team kills, and best spawns)")
             )
+
 
 -- build output for each option
 handle :: Data -> RoundMap -> [Text]
