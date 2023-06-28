@@ -20,11 +20,13 @@ import Data.Time
       TimeZone,
       parseTimeM,
       localTimeToUTC ) 
+import Data.Maybe (catMaybes)
 
 data Pred = Player Text
           | Stage Text
           | TimeBefore UTCTime
           | TimeAfter UTCTime
+          | FilterPrivateLobbies
           | Any  -- always true
           | Negate Pred
         deriving (Read, Show, Eq, Ord)
@@ -46,23 +48,31 @@ type Data = Filter Pred
 
 opts :: UTCTime -> TimeZone -> TimeLocale -> Parser (Filter Pred)
 opts UTCTime{utctDay=day} zone local = 
-    -- this allows you to repeat multiple before and afters, which is not ideal
-    -- but better than nothing
-    buildAndfilter <$> many (asum
-    [ (option (TimeBefore <$> maybeReader (parseTime))
-            (long "before" <> short 'b' <> metavar timeFMT <> help "Filter matches after this time"))
-    , (option (TimeAfter <$> maybeReader (parseTime))
-            (long "after" <> short 'a' <> metavar timeFMT <> help "Filter matches before this time"))
-    , (Player 
-            <$> strOption 
-                (long "player" <> short 'p' <> metavar "PLAYER" <> help "Filter matches to ones with PLAYER as a teammate"))
-    , (Negate . Player 
-            <$> strOption
-                (long "not-player" <> metavar "PLAYER" <> help "Filter matches to ones without PLAYER as a teammate"))
-    , (Stage 
-            <$> strOption
-                (long "stage" <> short 's' <> metavar "STAGE" <> help "Filter matches to ones on STAGE"))
-    ])
+    buildAndfilter <$>
+        -- we combine the two kinds of options with <>
+        liftA2 (<>)
+            -- We can only have one of these options
+            (liftA catMaybes . sequenceA . fmap optional $
+                [ flag FilterPrivateLobbies Any 
+                           (long "include-private" <> help "Include private battles in computed statistics")
+                , option (TimeBefore <$> maybeReader (parseTime))
+                           (long "before" <> short 'b' <> metavar timeFMT <> help "Filter matches after this time")
+                , option (TimeAfter <$> maybeReader (parseTime))
+                           (long "after" <> short 'a' <> metavar timeFMT <> help "Filter matches before this time")
+                ]
+            )
+            -- we can have many of these options
+            (many . asum $
+                [ Player <$> strOption 
+                           (long "player" <> short 'p' <> metavar "PLAYER" <> help "Filter matches to ones with PLAYER as a teammate")
+                , Negate . Player <$> strOption
+                           (long "not-player" <> metavar "PLAYER" <> help "Filter matches to ones without PLAYER as a teammate")
+                , Stage <$> strOption
+                           (long "stage" <> short 's' <> metavar "STAGE" <> help "Filter matches to ones on STAGE")
+                ]
+            )
+
+
    where timeFMT = "[[yyyy-]mm-dd]_hh[:mm[[:ss]]]"
          -- so many time formats in timeFMT...
          parseTime timeStr = 
@@ -104,12 +114,17 @@ buildAndfilter = foldr (\p f -> And (P p) f) (P Any)
 -- convert a Predicate to its implementation
 fromPred  :: Pred -> (Round -> Bool)
 fromPred = \cases
-    (Player name)  -> (isTeammate name)
-    (Stage  name)  -> ((== name) . stage)
-    (TimeBefore t) -> ((< t) . time)
-    (TimeAfter t)  -> ((> t) . time)
-    (Any)          -> const True
-    (Negate p)     -> liftA not $ fromPred p
+    (Player name)          -> (isTeammate name)
+    (Stage  name)          -> ((== name) . stage)
+    (TimeBefore t)         -> ((< t) . time)
+    (TimeAfter t)          -> ((> t) . time)
+    (FilterPrivateLobbies) -> \r -> maybe False 
+                                        (\cases
+                                            (PrivateScenario _) -> False
+                                            _                   -> True)
+                                        (shift r)
+    (Any)                  -> const True
+    (Negate p)             -> liftA not $ fromPred p
 
 -- collapses a boolean filter to a single function
 fromFilters :: Filter (Round -> Bool) -> (Round -> Bool)
