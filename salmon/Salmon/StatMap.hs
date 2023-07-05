@@ -112,8 +112,8 @@ null :: StatMap k s a -> Bool
 null = Prelude.null . unStatMap
 
 -- utility functions
-restrictKeys :: (Ord k) => StatMap k s b -> Set k -> StatMap k s b
-restrictKeys m s = alterStatMap (`M.restrictKeys` s) m
+restrictKeys :: (Ord k) => Set k -> StatMap k s b -> StatMap k s b
+restrictKeys s m = alterStatMap (`M.restrictKeys` s) m
 
 filter :: (s b -> Bool) -> StatMap k s b -> StatMap k s b
 filter = alterStatMap . M.filter

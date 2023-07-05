@@ -20,6 +20,7 @@ import Salmon.StatMap (StatMap)
 import qualified Salmon.StatMap as SM
 
 import Util.StatMap
+import Util.CSV
 
 data Flag = CSV
           | Sum
@@ -59,15 +60,20 @@ handle :: Data -> RoundMap -> [Text]
 handle (BData selectedSet f) m = 
     let selectedSet'   = if S.null selectedSet then S.fromList [minBound..] else selectedSet -- empty = all bosses
         -- a map of only the bosses we want to display
-        selectedBosses = M.map ((`SM.restrictKeys` selectedSet') . bosses) $ m
+        selectedBosses = M.map ((SM.restrictKeys selectedSet') . bosses) $ m
      in
         case f of
-             CSV  -> [makeHeader selectedSet'] <> buildLines selectedSet' selectedBosses
-             Sum  -> prettyPrintBossMap . statMapsSum $ selectedBosses
-             Mean -> prettyPrintBossMap @Double . statMapsAvg $ selectedBosses
-             Best -> prettyPrintBossMap . statMapsMax $ selectedBosses
+             CSV    -> toCSV bHeader blinePieces 3 selectedSet' selectedBosses
+             Sum    -> prettyPrintBossMap . statMapsSum $ selectedBosses
+             Mean   -> prettyPrintBossMap @Double . statMapsAvg $ selectedBosses
+             Best   -> prettyPrintBossMap . statMapsMax $ selectedBosses
              Median -> prettyPrintBossMap @(Maybe Double) . statMapsMedian $ selectedBosses
 
+bHeader k = let name = toText k
+                in fmap ((name <> " ") <>) ["kills", "team kills", "spawns"]
+
+blinePieces (BS killed teamKilled spawned) = fmap textShow [killed, teamKilled, spawned]
+    where textShow = T.pack . show
 
 -- builds the header for the boss CSV output
 -- each boss get's 3 columns: kills, team kills (which includes your own) and number spawned

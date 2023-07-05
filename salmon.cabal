@@ -43,7 +43,7 @@ executable salmonstats
     main-is: Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules: Boss, Filters, King, Util.StatMap, Command
+    other-modules: Boss, Filters, King, Util.StatMap, Util.CSV, Command
 
     -- LANGUAGE extensions used by modules in this package.
     build-depends:    salmonrun, optparse-applicative, cassava, some

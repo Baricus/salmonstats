@@ -59,7 +59,6 @@ main = do
     (rErrors, rounds) <- fmap (addShiftData shifts . toIDMap) . partitionEithers <$> readRoundsFromNXAPIdir dir
     -- print any errors we find
     mapM_ print rErrors
-
     -- filter rounds
     let filteredRounds = Filters.filterRounds filt rounds
     -- handle whatever command is given on the command line
