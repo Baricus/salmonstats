@@ -35,6 +35,7 @@ type GameID = Text
 
 data Shift = PrivateScenario Rule 
            | Regular Rule  StartTime EndTime
+           | Limited Rule StartTime EndTime   -- limited availability (eggstra work so far?)
         deriving (Show, Eq, Ord, Generic)
 
 instance ToJSON Shift where
@@ -50,6 +51,8 @@ instance FromNintendoJSON (Map GameID Shift) where
                         Regular <$> (n .: "rule") <*> (n .: "startTime") <*> (n .: "endTime")
                     "PRIVATE_SCENARIO" -> 
                         PrivateScenario <$> (n .: "rule") 
+                    "LIMITED"          ->
+                        Limited <$> (n .: "rule") <*> (n .: "startTime") <*> (n .: "endTime")
                     mode               -> 
                         fail ("Unknown mode: " <> T.unpack mode)
                 m = ((n .: "historyDetails") >>= (.: "nodes") >>= traverse (withObject "round" (.: "id")))
