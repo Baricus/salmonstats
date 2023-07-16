@@ -58,12 +58,6 @@ instance FromNintendoJSON (Map GameID Shift) where
                 m = ((n .: "historyDetails") >>= (.: "nodes") >>= traverse (withObject "round" (.: "id")))
             in M.fromList <$> liftA2 zip m (repeat <$> i)
 
---        Shft
- --       <$> (n .: "startTime")
-   --     <*> (n .: "endTime")
-     --   <*> (n .: "rule")
-       -- <*> (S.fromList <$> ((n .: "historyDetails") >>= (.: "nodes") >>= traverse (withObject "round" (.: "id"))))
-
 -- parse every shift in the summary file
 instance FromNintendoJSON [Map GameID Shift] where
     parseNJSON = withObject "summary" $ \obj -> (

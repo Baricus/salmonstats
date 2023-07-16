@@ -5,6 +5,8 @@ module Salmon.Boss (
     BossStats(..),
     -- Helper functions to work with boss objects
     sumBossStats,
+    maxBossStats,
+    consBossStats,
     ) where
 
 import Salmon.NintendoJSON
@@ -97,3 +99,9 @@ instance Applicative BossStats where
 
 sumBossStats :: (Num a) => BossStats a -> BossStats a -> BossStats a
 sumBossStats (BS k tk s) (BS k' tk' s') = BS (k + k') (tk + tk') (s + s')
+
+maxBossStats :: (Ord a) => BossStats a -> BossStats a -> BossStats a
+maxBossStats (BS a b c) (BS x y z) = BS (max a x) (max b y) (max c z)
+
+consBossStats :: BossStats a -> BossStats [a] -> BossStats [a]
+consBossStats (BS k tk s) (BS ks tks ss) = BS (k : ks) (tk : tks) (s : ss)

@@ -62,7 +62,6 @@ linePieces :: Show a => KingStats a -> [Text]
 linePieces (Kstat killed bronze silver gold) = fmap textShow [killed, bronze, silver, gold]
         where textShow = T.pack . show
 
-
 -- pretty printing
 prettyPrintKingMap :: Show a => StatMap King KingStats a -> [Text]
 prettyPrintKingMap = SM.foldMapWithKey buildLine
