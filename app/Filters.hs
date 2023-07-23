@@ -27,6 +27,7 @@ data Pred = Player Text
           | TimeBefore UTCTime
           | TimeAfter UTCTime
           | FilterPrivateLobbies
+          | Last Int -- last N matches
           | Any  -- always true
           | Negate Pred
         deriving (Read, Show, Eq, Ord)
@@ -54,11 +55,13 @@ opts UTCTime{utctDay=day} zone local =
             -- We can only have one of these options
             (liftA catMaybes . sequenceA . fmap optional $
                 [ flag FilterPrivateLobbies Any 
-                           (long "include-private" <> help "Include private battles in computed statistics")
+                       (long "include-private" <> help "Include private battles in computed statistics")
                 , option (TimeBefore <$> maybeReader (parseTime))
-                           (long "before" <> short 'b' <> metavar timeFMT <> help "Filter matches after this time")
+                       (long "before" <> short 'b' <> metavar timeFMT <> help "Filter matches after this time")
                 , option (TimeAfter <$> maybeReader (parseTime))
-                           (long "after" <> short 'a' <> metavar timeFMT <> help "Filter matches before this time")
+                       (long "after" <> short 'a' <> metavar timeFMT <> help "Filter matches before this time")
+                , option (Last <$> auto)
+                       (long "last" <> short 'l' <> metavar "MATCHES" <> help "Filter for the last MATCHES matches played")
                 ]
             )
             -- we can have many of these options
@@ -110,19 +113,21 @@ buildAndfilter :: [Pred] -> Filter Pred
 buildAndfilter = foldr (\p f -> And (P p) f) (P Any)
 
 -- convert a Predicate to its implementation
-fromPred  :: Pred -> (Round -> Bool)
-fromPred = \cases
+-- Requires a list of gameIDs to for things like Last
+fromPred  :: [GameID] -> Pred -> (Round -> Bool)
+fromPred ids = \cases
     (Player name)          -> (isTeammate name)
     (Stage  name)          -> ((== name) . stage)
     (TimeBefore t)         -> ((< t) . time)
     (TimeAfter t)          -> ((> t) . time)
+    (Last n)               -> (flip elem (take n ids) . gameID)
     (FilterPrivateLobbies) -> \r -> maybe False 
                                         (\cases
                                             (PrivateScenario _) -> False
                                             _                   -> True)
                                         (shift r)
     (Any)                  -> const True
-    (Negate p)             -> liftA not $ fromPred p
+    (Negate p)             -> liftA not $ fromPred ids p
 
 -- collapses a boolean filter to a single function
 fromFilters :: Filter (Round -> Bool) -> (Round -> Bool)
@@ -134,4 +139,6 @@ fromFilters = \cases
 -- filters the roundMap given the list of filters to apply
 -- assumes that the empty list means no filter
 filterRounds :: Filter Pred -> RoundMap -> RoundMap
-filterRounds = M.filter . fromFilters . fmap fromPred
+filterRounds filt rMap = 
+    let ids = getIDs rMap
+        in M.filter (fromFilters . fmap (fromPred ids) $ filt) rMap
