@@ -20,7 +20,7 @@ import Command (buildCommand)
 
 data Args = A
           { dataDir     :: FilePath
-          , filters     :: Filters.Data
+          , roundFilter :: RoundMap -> RoundMap
           , tuiCommand  :: RoundMap -> [Text]
           }
 
@@ -51,7 +51,7 @@ main = do
     -- get time info to pass on to the parser
     time <- getCurrentTime
     zone <- getCurrentTimeZone
-    A {dataDir=dir, filters=filt, tuiCommand=execCommand} <- execParser $ argParser time zone defaultTimeLocale
+    A {dataDir=dir, roundFilter=filt, tuiCommand=execCommand} <- execParser $ argParser time zone defaultTimeLocale
     -- read in the shifts
     (sErrors, shifts) <- fmap toIDShiftMap . partitionEithers <$> readShiftsFromNXAPIdir dir
     mapM_ print sErrors
@@ -59,9 +59,7 @@ main = do
     (rErrors, rounds) <- fmap (addShiftData shifts . toIDMap) . partitionEithers <$> readRoundsFromNXAPIdir dir
     -- print any errors we find
     mapM_ print rErrors
-    print $ length rounds
     -- filter rounds
-    let filteredRounds = Filters.filterRounds filt rounds
-    print $ length filteredRounds
+    let filteredRounds = filt rounds
     -- handle whatever command is given on the command line
     mapM_ T.putStrLn $ execCommand filteredRounds
