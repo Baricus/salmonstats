@@ -11,6 +11,8 @@ import Salmon
 import qualified Data.Map as M
 
 import Data.Text (Text)
+import qualified Data.Set as S
+import Data.Maybe (catMaybes)
 
 import Data.Time
     ( fromGregorian,
@@ -20,7 +22,7 @@ import Data.Time
       TimeZone,
       parseTimeM,
       localTimeToUTC ) 
-import Data.Maybe (catMaybes)
+
 
 data Pred = Player Text
           | Stage Text
@@ -120,7 +122,7 @@ fromPred ids = \cases
     (Stage  name)          -> ((== name) . stage)
     (TimeBefore t)         -> ((< t) . time)
     (TimeAfter t)          -> ((> t) . time)
-    (Last n)               -> (flip elem (take n ids) . gameID)
+    (Last n)               -> (flip S.member (S.fromList (take n ids)) . gameID)
     (FilterPrivateLobbies) -> \r -> maybe False 
                                         (\cases
                                             (PrivateScenario _) -> False
