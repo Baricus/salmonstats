@@ -115,9 +115,9 @@ instance FromNintendoJSON Round where
         gameID     <- res .: "id"
         time       <- res .: "playedTime"
         stage      <- res .: "coopStage" >>= getName
-        gameResult <- (\case (i :: Integer) | i == (-1) -> Disconnect -- -1 is used for disconnects
-                                            | i == 0    -> Won
-                                            | otherwise -> Loss . fromIntegral $ i) <$> res .: "resultWave"
+        gameResult <- (\case (i :: Int) | i == (-1) -> Disconnect -- -1 is used for disconnects
+                                        | i == 0    -> Won
+                                        | otherwise -> Loss . fromIntegral $ i) <$> res .: "resultWave"
         
         hazard     <- res .: "dangerRate"
         username   <- myRes .: "player" >>= getName
