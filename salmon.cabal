@@ -46,5 +46,5 @@ executable salmonstats
     other-modules: Boss, Filters, King, Util.StatMap, Util.CSV, Command
 
     -- LANGUAGE extensions used by modules in this package.
-    build-depends:    salmonrun, optparse-applicative, cassava, some
+    build-depends:    salmonrun, optparse-applicative
     hs-source-dirs:   app

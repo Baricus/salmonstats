@@ -11,12 +11,15 @@ import Salmon (readRoundsFromNXAPIdir, toIDMap, readShiftsFromNXAPIdir, toIDShif
 import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone)
 import Data.Time.Format (TimeLocale, defaultTimeLocale)
 
-import qualified Filters as Filters
+import System.Info
+
+import qualified Filters
 
 import Boss 
 import King 
 import Data.Text (Text)
 import Command (buildCommand)
+import System.Directory (getXdgDirectory, XdgDirectory (XdgData))
 
 data Args = A
           { dataDir     :: FilePath
@@ -30,10 +33,21 @@ commands = subparser
         <> buildCommand "kings"  King.parseCommand "Prints out stats for kings"
         )
 
-argParser :: UTCTime -> TimeZone -> TimeLocale -> ParserInfo Args
-argParser time zone local = info (helper <*>
+
+getDefaultDataDir :: IO FilePath
+getDefaultDataDir = case os of
+                      "darwin"  -> pure $ "Library/Logs/" <> end -- I cannot test this, unfortunately
+                      "linux"   -> getXdgDirectory XdgData end
+                      "windows" -> getXdgDirectory XdgData end
+                      _         -> error unsupportedMsg
+    where end = "nxapi-nodejs/splatnet3"
+          unsupportedMsg = "Unrecognized OS prevented default data directory from being selected; please specify the data directory using --dir"
+                
+
+argParser :: FilePath -> UTCTime -> TimeZone -> TimeLocale -> ParserInfo Args
+argParser defaultDataDir time zone local = info (helper <*>
                  -- TODO: change default to nxapi data directory (and move my data over)
-                 (A <$> strOption (value "splatnet3" <> showDefault <> metavar "DIRECTORY" <> long "dir" <> short 'd' <> help "Directory which contains the nxapi salmon run results") 
+                 (A <$> strOption (value defaultDataDir <> showDefault <> metavar "DIRECTORY" <> long "dir" <> short 'd' <> help "Directory which contains the nxapi salmon run results") 
                     <*> Filters.opts time zone local
                     <*> commands))
                  (fullDesc <> progDesc "Outputs various salmon run stats")
@@ -48,10 +62,12 @@ argParser time zone local = info (helper <*>
 
 main :: IO ()
 main = do
-    -- get time info to pass on to the parser
+    -- get info to pass on to the parser
     time <- getCurrentTime
     zone <- getCurrentTimeZone
-    A {dataDir=dir, roundFilter=filt, tuiCommand=execCommand} <- execParser $ argParser time zone defaultTimeLocale
+    defaultDataDir <- getDefaultDataDir
+    A {dataDir=dir, roundFilter=filt, tuiCommand=execCommand} <- 
+            execParser $ argParser defaultDataDir time zone defaultTimeLocale
     -- read in the shifts
     (sErrors, shifts) <- fmap toIDShiftMap . partitionEithers <$> readShiftsFromNXAPIdir dir
     mapM_ print sErrors
