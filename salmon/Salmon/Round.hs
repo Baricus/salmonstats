@@ -52,6 +52,7 @@ data GameResult
          = Won -- beat all 3-4 waves
          | Loss Natural -- final wave number
          | Disconnect
+         | Unknown
     deriving (Show, Generic)
 
 instance ToJSON GameResult where

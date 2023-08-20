@@ -43,8 +43,8 @@ data Data = BData
           Bool -- Should we sum up all bosses selected or not
                 deriving (Show)
 
-parseCommand :: Parser (Config -> RoundMap -> [Text])
-parseCommand = flip handle <$> parser
+parseCommand :: Parser (RoundMap -> [Text])
+parseCommand = handle <$> parser
 
 parser :: Parser Data
 parser = BData 
@@ -67,20 +67,17 @@ parser = BData
 
 
 -- build output for each option
-handle :: Config -> Data -> RoundMap -> [Text]
-handle Config {offsets=offsets} (BData selectedSet f shouldSum) m = 
+handle :: Data -> RoundMap -> [Text]
+handle (BData selectedSet f shouldSum) m = 
     let selectedSet'   = if S.null selectedSet then S.fromList [minBound..] else selectedSet -- empty = all bosses
         -- a map of only the bosses we want to display
-        selectedBosses = M.map (SM.restrictKeys selectedSet' . bosses) $ m
-        -- convert our offests to a stat map to add it
-        offsetSM = SM.fromMap . fmap (\o -> BS o 0 0) $ offsets
-        filteredOffSM = SM.restrictKeys selectedSet' offsetSM
+        selectedBosses = M.map (SM.restrictKeys selectedSet' . bosses) m
 
      in if shouldSum 
      then case f of
              CSV    -> error "Cannot output totalled CSV" -- TODO: rule out in parser
              Sum    -> prettyPrintBossStats "TOTAL" 
-                . SM.statsFoldl' (+) 0 . statMapsSum $ M.insert "OFFSETS" filteredOffSM selectedBosses
+                . SM.statsFoldl' (+) 0 . statMapsSum $ selectedBosses
              Mean   -> prettyPrintBossStats @Double "TOTAL" . collapsedAvg $ selectedBosses
              Best   -> prettyPrintBossStats "TOTAL" 
                 . M.foldl' maxBossStats (BS 0 0 0) . fmap (SM.statsFoldl' (+) 0) $ selectedBosses
@@ -89,7 +86,7 @@ handle Config {offsets=offsets} (BData selectedSet f shouldSum) m =
                 . M.foldl' (flip consBossStats) (BS [] [] []) . fmap (SM.statsFoldl' (+) 0) $ selectedBosses
      else case f of
              CSV    -> toCSV bHeader blinePieces 3 selectedSet' selectedBosses
-             Sum    -> prettyPrintBossMap . statMapsSum $ M.insert "OFFSETS" filteredOffSM selectedBosses
+             Sum    -> prettyPrintBossMap . statMapsSum $ selectedBosses
              Mean   -> prettyPrintBossMap @Double . statMapsAvg $ selectedBosses
              Best   -> prettyPrintBossMap . statMapsMax $ selectedBosses
              Median -> prettyPrintBossMap @(Maybe Double) . statMapsMedian $ selectedBosses

@@ -33,7 +33,7 @@ data Pred = Player Text
 
 -- Things that affect results that aren't predicates on individual filters
 -- but instead of the set of games as a whole
-data Modifiers = Last Int
+newtype Modifiers = Last Int
 
 -- generic in the filter to allow for transformations!
 data Filter op = And (Filter op) (Filter op)
@@ -130,7 +130,7 @@ fromPred = \cases
     (TimeBefore t)         -> ((< t) . time)
     (TimeAfter t)          -> ((> t) . time)
     --(Last n)               -> (flip S.member (S.fromList (take n ids)) . gameID)
-    (FilterPrivateLobbies) -> \r -> maybe False 
+    (FilterPrivateLobbies) -> \r -> maybe True
                                         (\cases
                                             (PrivateScenario _) -> False
                                             _                   -> True)
