@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module Config.Offsets 
     -- | This exports configuration for offsetting various calculations to provide accurate counts.
     -- This is most important when computing the sum of killed bosses, since this allows for accounting

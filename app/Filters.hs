@@ -119,7 +119,7 @@ opts UTCTime{utctDay=day} zone local =
 -- takes a list of predicates and adds them
 -- into a single "anded" together clause
 buildAndfilter :: [Pred] -> Filter Pred
-buildAndfilter = foldr (\p f -> And (P p) f) (P Any)
+buildAndfilter = foldr (And . P) (P Any)
 
 -- convert a Predicate to its implementation
 -- Requires a list of gameIDs to for things like Last
@@ -129,14 +129,13 @@ fromPred = \cases
     (Stage  name)          -> ((== name) . stage)
     (TimeBefore t)         -> ((< t) . time)
     (TimeAfter t)          -> ((> t) . time)
-    --(Last n)               -> (flip S.member (S.fromList (take n ids)) . gameID)
     (FilterPrivateLobbies) -> \r -> maybe True
                                         (\cases
                                             (PrivateScenario _) -> False
                                             _                   -> True)
                                         (shift r)
-    (Any)                  -> const True
-    (Negate p)             -> liftA not $ fromPred p
+    Any                    -> const True
+    (Negate p)             -> not <$> fromPred p
 
 -- collapses a boolean filter to a single function
 fromFilters :: Filter (Round -> Bool) -> (Round -> Bool)
@@ -157,4 +156,4 @@ runModifiers (m : ms) rMap =
 -- filters the roundMap given the list of filters to apply
 -- assumes that the empty list means no filter
 filterRounds :: Data -> RoundMap -> RoundMap
-filterRounds (filt, mods) rMap = runModifiers mods $ M.filter (fromFilters . fmap (fromPred) $ filt) rMap
+filterRounds (filt, mods) rMap = runModifiers mods $ M.filter (fromFilters . fmap fromPred $ filt) rMap
