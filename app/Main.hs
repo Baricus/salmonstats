@@ -19,15 +19,21 @@ import Boss
 import King 
 import Data.Text (Text)
 import Command (buildCommand)
-import System.Directory (getXdgDirectory, XdgDirectory (XdgData))
+
+import System.FilePath
+import System.Directory 
+
+import Data.Ini.Config
+
+import Config
 
 data Args = A
           { dataDir     :: FilePath
           , roundFilter :: RoundMap -> RoundMap
-          , tuiCommand  :: RoundMap -> [Text]
+          , tuiCommand  :: Config -> RoundMap -> [Text]
           }
 
-commands :: Parser (RoundMap -> [Text])
+commands :: Parser (Config -> RoundMap -> [Text])
 commands = subparser
         (  buildCommand "bosses" Boss.parseCommand "Prints out boss kills for requested bosses"
         <> buildCommand "kings"  King.parseCommand "Prints out stats for kings"
@@ -43,6 +49,8 @@ getDefaultDataDir = case os of
     where end = "nxapi-nodejs/splatnet3"
           unsupportedMsg = "Unrecognized OS prevented default data directory from being selected; please specify the data directory using --dir"
                 
+getConfigDirectory :: IO FilePath
+getConfigDirectory = getXdgDirectory XdgConfig "salmonstats"
 
 argParser :: FilePath -> UTCTime -> TimeZone -> TimeLocale -> ParserInfo Args
 argParser defaultDataDir time zone local = info (helper <*>
@@ -51,6 +59,7 @@ argParser defaultDataDir time zone local = info (helper <*>
                     <*> Filters.opts time zone local
                     <*> commands))
                  (fullDesc <> progDesc "Outputs various salmon run stats")
+
 
 -- format notes:
 -- Args should have general options like a list of filters (dates, players, etc) 
@@ -62,6 +71,15 @@ argParser defaultDataDir time zone local = info (helper <*>
 
 main :: IO ()
 main = do
+    -- parses config if it exists
+    configDir <- getConfigDirectory
+    createDirectoryIfMissing True configDir
+    let configPath = configDir </> "config"
+    configExists <- doesFileExist configPath
+    configData   <- if configExists
+                       then either error id . (flip parseIniFile configParser) <$> T.readFile configPath 
+                       else pure defaultConfig
+
     -- get info to pass on to the parser
     time <- getCurrentTime
     zone <- getCurrentTimeZone
@@ -78,4 +96,4 @@ main = do
     -- filter rounds
     let filteredRounds = filt rounds
     -- handle whatever command is given on the command line
-    mapM_ T.putStrLn $ execCommand filteredRounds
+    mapM_ T.putStrLn $ execCommand configData filteredRounds

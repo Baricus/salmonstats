@@ -8,6 +8,8 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import Data.String (IsString)
+
 import Data.Map (Map)
 import qualified Data.Map as M
 
@@ -24,6 +26,9 @@ import Util.CSV
 import GHC.Natural (Natural)
 import Data.List (sort)
 
+import Config
+
+
 data Flag = CSV
           | Sum
           | Mean
@@ -38,8 +43,8 @@ data Data = BData
           Bool -- Should we sum up all bosses selected or not
                 deriving (Show)
 
-parseCommand :: Parser (RoundMap -> [Text])
-parseCommand = handle <$> parser
+parseCommand :: Parser (Config -> RoundMap -> [Text])
+parseCommand = flip handle <$> parser
 
 parser :: Parser Data
 parser = BData 
@@ -62,23 +67,29 @@ parser = BData
 
 
 -- build output for each option
-handle :: Data -> RoundMap -> [Text]
-handle (BData selectedSet f shouldSum) m = 
+handle :: Config -> Data -> RoundMap -> [Text]
+handle Config {offsets=offsets} (BData selectedSet f shouldSum) m = 
     let selectedSet'   = if S.null selectedSet then S.fromList [minBound..] else selectedSet -- empty = all bosses
         -- a map of only the bosses we want to display
-        selectedBosses = M.map ((SM.restrictKeys selectedSet') . bosses) $ m
+        selectedBosses = M.map (SM.restrictKeys selectedSet' . bosses) $ m
+        -- convert our offests to a stat map to add it
+        offsetSM = SM.fromMap . fmap (\o -> BS o 0 0) $ offsets
+        filteredOffSM = SM.restrictKeys selectedSet' offsetSM
+
      in if shouldSum 
      then case f of
              CSV    -> error "Cannot output totalled CSV" -- TODO: rule out in parser
-             Sum    -> prettyPrintBossStats "TOTAL" . SM.statsFoldl' (+) 0 . statMapsSum $ selectedBosses
+             Sum    -> prettyPrintBossStats "TOTAL" 
+                . SM.statsFoldl' (+) 0 . statMapsSum $ M.insert "OFFSETS" filteredOffSM selectedBosses
              Mean   -> prettyPrintBossStats @Double "TOTAL" . collapsedAvg $ selectedBosses
              Best   -> prettyPrintBossStats "TOTAL" 
                 . M.foldl' maxBossStats (BS 0 0 0) . fmap (SM.statsFoldl' (+) 0) $ selectedBosses
              Median -> prettyPrintBossStats @(Maybe Double) "TOTAL" 
-                . (fmap (calcMedian . sort)) . M.foldl' (flip consBossStats) (BS [] [] []) . fmap (SM.statsFoldl' (+) 0) $ selectedBosses
+                . fmap (calcMedian . sort) 
+                . M.foldl' (flip consBossStats) (BS [] [] []) . fmap (SM.statsFoldl' (+) 0) $ selectedBosses
      else case f of
              CSV    -> toCSV bHeader blinePieces 3 selectedSet' selectedBosses
-             Sum    -> prettyPrintBossMap . statMapsSum $ selectedBosses
+             Sum    -> prettyPrintBossMap . statMapsSum $ M.insert "OFFSETS" filteredOffSM selectedBosses
              Mean   -> prettyPrintBossMap @Double . statMapsAvg $ selectedBosses
              Best   -> prettyPrintBossMap . statMapsMax $ selectedBosses
              Median -> prettyPrintBossMap @(Maybe Double) . statMapsMedian $ selectedBosses
@@ -89,38 +100,13 @@ collapsedAvg m = let len = length m
         in fmap ((/ fromIntegral len) . fromIntegral) . SM.statsFoldr (+) 0 . fmap sum . SM.toStatsList $ m
 
 
+bHeader :: (Semigroup b, Textworthy p, IsString b) => p -> [b]
 bHeader k = let name = toText k
                 in fmap ((name <> " ") <>) ["kills", "team kills", "spawns"]
 
 blinePieces :: Show a => BossStats a -> [Text]
 blinePieces (BS killed teamKilled spawned) = fmap textShow [killed, teamKilled, spawned]
     where textShow = T.pack . show
-
--- builds the header for the boss CSV output
--- each boss get's 3 columns: kills, team kills (which includes your own) and number spawned
-makeHeader :: Set Boss -> Text
-makeHeader = T.intercalate "\t"
-            -- prepend GameID
-            . ("Game ID," :) 
-            -- add boss columns to line for each in the set
-            . foldr (\boss headLine -> buildRows boss : headLine) []
-    where buildRows b = let name = toText b
-                            in name <> " kills,\t" <> name <> " team kills,\t" <> name <> " spawns,"
-
-
--- builds up CSV lines from the map of bosses
--- If there is no data for a boss (it wasn't in the wave) we show it as blank
-buildLines :: (Show a) => Set Boss -> Map GameID (StatMap Boss BossStats a) -> [Text]
-buildLines selSet bossMap = M.foldrWithKey (\i bm ls -> buildLine i bm : ls) [] bossMap
-    where buildLine i bm = T.intercalate "\t"  -- combines bosses together with tabs
-            -- adds the ID and comma to the front
-            . (i <> "," :) 
-            -- goes through the set and builds a string per selected boss
-            . foldr (\b l -> (printBStat . flip SM.getStats bm) b : l) [] 
-            $ selSet
-          printBStat (Just (BS k tk s)) = packShow k <> ",\t" <> packShow tk <> ",\t" <> packShow s <> ","
-          printBStat Nothing            = ",\t,\t," -- nothing there but same number of commas and tabs to align
-          packShow = T.pack . show                
 
 ---- finds the largest statistic for each boss out of all the bosses
 --findMax :: (Ord a) => Map k (StatMap Boss BossStats a) -> StatMap Boss BossStats a

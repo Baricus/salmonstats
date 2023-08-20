@@ -8,6 +8,8 @@ module Salmon.StatMap (
     -- creation and insertion
     empty,
     insertStats,
+    fromList,
+    fromMap,
     -- query
     getStats,
     Salmon.StatMap.null,
@@ -104,16 +106,22 @@ empty = StatMap M.empty
 insertStats :: (Ord k) => k -> s a -> StatMap k s a -> StatMap k s a
 insertStats b s = alterStatMap $ M.insert b s
 
+fromList :: (Ord k) => [(k, s a)] -> StatMap k s a
+fromList = StatMap . M.fromList
+
+fromMap :: Map k (s a) -> StatMap k s a
+fromMap = StatMap
+
 -- query
 getStats :: (Ord k) => k -> StatMap k s a -> Maybe (s a)
-getStats b m = liftMapToStatMap (M.lookup b) m
+getStats b = liftMapToStatMap (M.lookup b)
 
 null :: StatMap k s a -> Bool
 null = Prelude.null . unStatMap
 
 -- utility functions
 restrictKeys :: (Ord k) => Set k -> StatMap k s b -> StatMap k s b
-restrictKeys s m = alterStatMap (`M.restrictKeys` s) m
+restrictKeys s = alterStatMap (`M.restrictKeys` s)
 
 filter :: (s b -> Bool) -> StatMap k s b -> StatMap k s b
 filter = alterStatMap . M.filter

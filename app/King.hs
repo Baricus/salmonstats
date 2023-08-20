@@ -20,6 +20,7 @@ import qualified Salmon.StatMap as SM
 
 import Util.StatMap
 import Util.CSV
+import Config (Config)
 
 data Flag = CSV
           | Sum
@@ -29,8 +30,8 @@ data Flag = CSV
 data Data = KData (Set King) Flag
     deriving (Show)
 
-parseCommand :: Parser (RoundMap -> [Text])
-parseCommand = handle <$> parser
+parseCommand :: Parser (Config -> RoundMap -> [Text])
+parseCommand = flip handle <$> parser
 
 parser :: Parser Data
 parser = KData . S.fromList 
@@ -42,8 +43,9 @@ parser = KData . S.fromList
           <|> flag' WinRate (long "winrate" <> short 'w' <> help "win rate against selected bosses")
         )
 
-handle :: Data -> RoundMap -> [Text]
-handle (KData selected flg) m =
+-- currently, this just ignores the config
+handle :: Config -> Data -> RoundMap -> [Text]
+handle _ (KData selected flg) m =
     let selectedSet'   = if S.null selected then S.fromList [minBound..] else selected -- empty = all kings
         -- a map of only the kings we want to display
         -- removing any null maps since most will be that and then we can skip them
