@@ -10,7 +10,7 @@ Feel free to open an issue suggesting the kind of analysis you'd be interested i
 I eventually hope for `salmonstats` to cover most analysis needs.
 
 ## Running salmonstats
-`salmonstats` is a cabal project and can be run via
+`salmonstats` is written in Haskell as a [cabal](https://www.haskell.org/cabal/) project and can be run via
 ```bash
 cabal run salmonstats -- -h
 ```
