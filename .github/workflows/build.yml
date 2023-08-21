@@ -89,11 +89,26 @@ jobs:
 
       - name: Get binaries
         if: ${{ inputs.upload-artifacts }}
-        run: cabal install --installdir out --install-method=copy
-
-      - name: Get sdist
-        if: ${{ inputs.upload-artifacts && runner.os == 'Linux' }}
-        run: cabal sdist -o out
+        run: |
+          cabal install --installdir out --install-method=copy
+          # move binary to a unique name for the os triple
+          if [ "$RUNNER_OS" == "Windows" ]
+          then
+            mv out/salmonstats.exe out/salmonstats-win-x86_64.exe
+          elif [ "$RUNNER_OS" == "macOS" ]
+          then
+            mv out/salmonstats out/samonstats-darwin-x86_64
+          elif [ "$RUNNER_OS" == "Linux" ]
+            strip out/salmonstats
+            mv out/salmonstats out/salmonstats-linux-x86_64
+          else
+            echo "ERROR: unrecognized OS"
+            exit 1
+          fi
+      # no need; github already packages the source code
+      #- name: Get sdist
+        #if: ${{ inputs.upload-artifacts && runner.os == 'Linux' }}
+        #run: cabal sdist -o out
 
       - name: Upload artifacts
         if: ${{ inputs.upload-artifacts }}
