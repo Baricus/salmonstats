@@ -3,10 +3,10 @@
 
 name: build
 on:
-  #push:
-    #branches: [main]
-  #pull_request:
-    #branches: [main]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
   workflow_call:
     inputs:
@@ -15,6 +15,8 @@ on:
         description: True or False
         default: false
         required: true
+    outputs:
+
 
 permissions:
   contents: read
@@ -85,7 +87,7 @@ jobs:
 
       - name: Make output directory
         if: ${{ inputs.upload-artifacts }}
-        run: mkdir out
+        run: mkdir 
 
       - name: Get binaries
         if: ${{ inputs.upload-artifacts }}
@@ -99,5 +101,5 @@ jobs:
         if: ${{ inputs.upload-artifacts }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ runner.os }}-build-out
+          name: ${{ runner.os }}
           path: out
