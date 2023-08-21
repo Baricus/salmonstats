@@ -87,20 +87,17 @@ jobs:
       #- name: Build documentation
          #run: cabal haddock all 
 
-      - if: inputs.upload-artifacts 
-        uses: actions/upload-artifact@v3
+      - name: Get binaries
+          - run: |
+              mkdir out 
+              cabal install --installdir out --install-method=copy
 
-        name: Get binaries
-        - run: |
-            mkdir out 
-            cabal install --installdir out --install-method=copy
+          - if: ${{ runner.os }} == "ubuntu-latest"
+            name: Get sdist
+            run: cabal sdist -o out
 
-        - if: ${{ runner.os }} == "ubuntu-latest"
-          name: Get sdist
-          run: cabal sdist -o out
-
-        - name: Upload artifacts
-          uses: actions/upload-artifact@v3
-          with:
-            name: ${{ runner.os }}-build-out
-            path: out
+          - name: Upload artifacts
+            uses: actions/upload-artifact@v3
+            with:
+              name: ${{ runner.os }}-build-out
+              path: out
