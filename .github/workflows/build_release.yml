@@ -88,8 +88,10 @@ jobs:
          #run: cabal haddock all 
 
       - if: inputs.upload-artifacts 
-        - name: Get binaries
-          run: |
+        uses: actions/upload-artifact@v3
+
+        name: Get binaries
+        - run: |
             mkdir out 
             cabal install --installdir out --install-method=copy
 
