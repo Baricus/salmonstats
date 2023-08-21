@@ -1,0 +1,22 @@
+# Github Workflow
+# builds the artifacts for a release whenever it is drafted
+
+name: add_artifacts_to_release
+
+on:
+  release:
+    isDraft: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Consolidate and upload
+    runs-on: ubuntu-latest
+
+  steps:
+    - uses ./.github/workflows/build.yml
+      with:
+        upload-artifacts: true
+

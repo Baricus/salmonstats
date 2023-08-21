@@ -1,6 +1,7 @@
 # largely taken from https://github.com/haskell/actions/tree/main/setup
 # rather than the default "haskell action" since this seems to be multiplatform out of the box
-name: build_release
+
+name: build
 on:
   push:
     branches: [main]
