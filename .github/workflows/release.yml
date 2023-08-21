@@ -1,11 +1,13 @@
 # Github Workflow
-# builds the artifacts for a release whenever it is drafted
+# Creates a draft release whenever a tag with v* is added
 
 name: add_artifacts_to_release
 
 on:
-  release:
-    isDraft: true
+  push:
+    branches: [main, release/*]
+    tags:  
+      - "v*"
 
 permissions:
   contents: write
