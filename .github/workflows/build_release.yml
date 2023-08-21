@@ -88,6 +88,5 @@ jobs:
 
 
       - name: Get Binary
-        run: mkdir out
-        run: cabal install --installdir out --install-method=copy
+        run: mkdir out && cabal install --installdir out --install-method=copy
 
