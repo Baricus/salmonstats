@@ -24,8 +24,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: download artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v3
+
+      - name: List artifacts
+        run: ls -R artifacts/
 
       - name: Strip binaries
         run: |
