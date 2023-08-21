@@ -34,8 +34,9 @@ jobs:
       - name: Strip binaries
         run: |
           strip ${{steps.download.outputs.download-path}}/Linux/salmonstats
-          strip ${{steps.download.outputs.download-path}}/macOS/salmonstats
-          strip ${{steps.download.outputs.download-path}}/Windows/salmonstats
+          # TODO: figure out how to strip other binaries
+          # strip ${{steps.download.outputs.download-path}}/macOS/salmonstats
+          # strip ${{steps.download.outputs.download-path}}/Windows/salmonstats
 
       - name: Create Release
         uses: ncipollo/release-action@v1.12.0
