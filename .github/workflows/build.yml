@@ -89,6 +89,7 @@ jobs:
 
       - name: Get binaries
         if: ${{ inputs.upload-artifacts }}
+        shell: bash
         run: |
           cabal install --installdir out --install-method=copy
           # move binary to a unique name for the os triple
