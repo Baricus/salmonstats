@@ -1,6 +1,6 @@
 # largely taken from https://github.com/haskell/actions/tree/main/setup
 # rather than the default "haskell action" since this seems to be multiplatform out of the box
-name: release
+name: build_release
 on:
   push:
     branches: [main]
@@ -87,8 +87,18 @@ jobs:
           #run: cabal haddock all 
 
 
-      - name: Get Artifacts
-        run: |
-          mkdir out 
-          cabal install --installdir out --install-method=copy
-          cabal sdist -o out
+      - if: upload-artifacts
+        - name: Get binaries
+          run: |
+            mkdir out 
+            cabal install --installdir out --install-method=copy
+
+        - if: ${{ runner.os }} == "ubuntu-latest"
+          name: Get sdist
+          run: cabal sdist -o out
+
+        - name: Upload artifacts
+          uses: actions/upload-artifact@v3
+          with:
+            name: ${{ runner.os }}-build-out
+            path: out
