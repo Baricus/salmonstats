@@ -7,6 +7,13 @@ on:
   pull_request:
     branches: [main]
 
+  workflow-dispatch:
+    inputs:
+      upload-artifacts:
+        type: boolean
+        required: false
+        default: false
+
 permissions:
   contents: read
 
@@ -34,7 +41,7 @@ jobs:
         id: setup
         with:
           ghc-version: ${{ matrix.ghc-version }}
-          # Defaults, added for clarity:
+            # Defaults, added for clarity:
           cabal-version: 'latest'
           cabal-update: true
 
@@ -42,7 +49,7 @@ jobs:
         run: |
           cabal configure --enable-tests --enable-benchmarks --disable-documentation
           cabal build --dry-run
-        # The last step generates dist-newstyle/cache/plan.json for the cache key.
+          # The last step generates dist-newstyle/cache/plan.json for the cache key.
 
       - name: Restore cached dependencies
         uses: actions/cache/restore@v3
@@ -57,10 +64,10 @@ jobs:
       - name: Install dependencies
         run: cabal build all --only-dependencies -j
 
-      # Cache dependencies already here, so that we do not have to rebuild them should the subsequent steps fail.
+          # Cache dependencies already here, so that we do not have to rebuild them should the subsequent steps fail.
       - name: Save cached dependencies
         uses: actions/cache/save@v3
-        # Caches are immutable, trying to save with the same key would error.
+          # Caches are immutable, trying to save with the same key would error.
         if: ${{ steps.cache.outputs.cache-primary-key != steps.cache.outputs.cache-matched-key }}
         with:
           path: ${{ steps.setup.outputs.cabal-store }}
@@ -74,8 +81,14 @@ jobs:
 
       - name: Check cabal file
         run: cabal check
-        
-      # Docs still need to be produced and I'm not sure haddock is the best place
-      # currently everything is 
-      #- name: Build documentation
-        #run: cabal haddock all -j
+
+          # Docs still need to be produced and I'm not sure haddock is the best place
+          # currently everything is 
+          #- name: Build documentation
+          #run: cabal haddock all 
+
+
+      - name: Get Binary
+        run: mkdir out
+        run: cabal install --installdir out --install-method=copy
+
