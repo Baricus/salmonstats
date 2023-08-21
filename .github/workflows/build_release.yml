@@ -86,8 +86,7 @@ jobs:
           #- name: Build documentation
           #run: cabal haddock all 
 
-
-      - if: upload-artifacts
+      - if: upload-artifacts == true
         - name: Get binaries
           run: |
             mkdir out 
