@@ -20,18 +20,12 @@ permissions:
 jobs:
   build:
     name: GHC ${{ matrix.ghc-version }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         ghc-version: ['9.6']
-
-        include:
-          - os: windows-latest
-            ghc-version: '9.6'
-          - os: macos-latest
-            ghc-version: '9.6'
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v3
@@ -87,17 +81,21 @@ jobs:
       #- name: Build documentation
          #run: cabal haddock all 
 
+      - name: Make output directory
+        if: ${{ inputs.upload-artifacts }}
+        run: mkdir out
+
       - name: Get binaries
-          - run: |
-              mkdir out 
-              cabal install --installdir out --install-method=copy
+        if: ${{ inputs.upload-artifacts }}
+        run: cabal install --installdir out --install-method=copy
 
-          - if: ${{ runner.os }} == "ubuntu-latest"
-            name: Get sdist
-            run: cabal sdist -o out
+      - name: Get sdist
+        if: ${{ inputs.upload-artifacts }} && ${{ runner.os }} == "ubuntu-latest"
+        run: cabal sdist -o out
 
-          - name: Upload artifacts
-            uses: actions/upload-artifact@v3
-            with:
-              name: ${{ runner.os }}-build-out
-              path: out
+      - name: Upload artifacts
+        if: ${{ inputs.upload-artifacts }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ runner.os }}-build-out
+          path: out
