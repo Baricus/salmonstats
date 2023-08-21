@@ -87,7 +87,7 @@ jobs:
       #- name: Build documentation
          #run: cabal haddock all 
 
-      - if: ${{ inputs.upload-artifacts }} == true
+      - if: inputs.upload-artifacts 
         - name: Get binaries
           run: |
             mkdir out 
