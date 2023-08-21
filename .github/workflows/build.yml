@@ -99,6 +99,7 @@ jobs:
           then
             mv out/salmonstats out/samonstats-darwin-x86_64
           elif [ "$RUNNER_OS" == "Linux" ]
+          then
             strip out/salmonstats
             mv out/salmonstats out/salmonstats-linux-x86_64
           else
