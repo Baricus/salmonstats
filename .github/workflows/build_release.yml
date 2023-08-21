@@ -11,6 +11,7 @@ on:
     inputs:
       upload-artifacts:
         type: boolean
+        description: True or False
         required: true
 
 permissions:
@@ -86,7 +87,7 @@ jobs:
           #- name: Build documentation
           #run: cabal haddock all 
 
-      - if: upload-artifacts == true
+      - if: ${{ inputs.upload-artifacts }} == true
         - name: Get binaries
           run: |
             mkdir out 
