@@ -29,9 +29,9 @@ jobs:
 
       - name: Strip binaries
         run: |
-          strip artifacts/Linux/salmonstats
-          strip artifacts/macOS/salmonstats
-          strip artifacts/Windows/salmonstats
+          strip artifacts/Linux/out/salmonstats
+          strip artifacts/macOS/out/salmonstats
+          strip artifacts/Windows/out/salmonstats
 
       - name: Create Release
         uses: ncipollo/release-action@v1.12.0
