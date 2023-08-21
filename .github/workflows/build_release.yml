@@ -90,7 +90,7 @@ jobs:
         run: cabal install --installdir out --install-method=copy
 
       - name: Get sdist
-        if: ${{ inputs.upload-artifacts }} == true && ${{ runner.os }} == "ubuntu-latest"
+        if: ${{ inputs.upload-artifacts && runner.os == "ubuntu-latest" }}
         run: cabal sdist -o out
 
       - name: Upload artifacts
