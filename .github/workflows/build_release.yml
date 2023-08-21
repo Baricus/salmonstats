@@ -87,6 +87,8 @@ jobs:
           #run: cabal haddock all 
 
 
-      - name: Get Binary
-        run: mkdir out && cabal install --installdir out --install-method=copy
-
+      - name: Get Artifacts
+        run: |
+          mkdir out 
+          cabal install --installdir out --install-method=copy
+          cabal sdist -o out
