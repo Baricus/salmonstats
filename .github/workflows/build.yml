@@ -15,8 +15,6 @@ on:
         description: True or False
         default: false
         required: true
-    outputs:
-
 
 permissions:
   contents: read
