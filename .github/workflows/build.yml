@@ -85,7 +85,7 @@ jobs:
 
       - name: Make output directory
         if: ${{ inputs.upload-artifacts }}
-        run: mkdir 
+        run: mkdir out
 
       - name: Get binaries
         if: ${{ inputs.upload-artifacts }}
