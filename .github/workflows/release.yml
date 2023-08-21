@@ -14,18 +14,18 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  make-artifacts:
+    name: Build artifacts
+    uses: ./.github/workflows/build.yml
+    with:
+      upload-artifacts: true
+
+  make-release:
+    needs: make-artifacts
     name: Consolidate and upload
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: build artifacts
-        uses: ./.github/workflows/build.yml
-        with:
-          upload-artifacts: true
-
       - name: download artifacts
         uses: actions/download-artifact@v3
 
