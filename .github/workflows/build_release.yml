@@ -82,10 +82,10 @@ jobs:
       - name: Check cabal file
         run: cabal check
 
-          # Docs still need to be produced and I'm not sure haddock is the best place
-          # currently everything is 
-          #- name: Build documentation
-          #run: cabal haddock all 
+      # Docs still need to be produced and I'm not sure haddock is the best place
+      # currently everything is 
+      #- name: Build documentation
+         #run: cabal haddock all 
 
       - if: ${{ inputs.upload-artifacts }} == true
         - name: Get binaries
