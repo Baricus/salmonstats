@@ -1,7 +1,7 @@
 module Textworthy where
 
 import Data.Text (Text)
-import Data.String (IsString, fromString)
+import Data.String (IsString)
 
 class Textworthy a where
     toText   :: IsString s => a -> s

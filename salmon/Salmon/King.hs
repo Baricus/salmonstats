@@ -8,13 +8,9 @@ import qualified Data.Text as T
 import GHC.Generics ( Generic )
 import GHC.Natural ( Natural ) 
 
-import Text.Read (readMaybe)
-
 import Data.Aeson
 import Data.String (IsString (fromString))
 import Textworthy
-
-import Debug.Trace
 
 -- King salmonoids!
 data King = Cohozuna
@@ -63,7 +59,7 @@ instance FromNintendoJSON (King, KingStats Natural) where
         bossRes <- obj .: "bossResult"
         scales  <- obj .: "scale"
 
-        name <- (bossRes .: "boss" >>= (.: "name"))
+        name <- bossRes .: "boss" >>= (.: "name")
 
         -- defeat is usually a boolean but we want a 0-1 number for consistency
         defeatB <- bossRes .: "hasDefeatBoss"

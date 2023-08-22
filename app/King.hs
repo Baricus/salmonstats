@@ -20,7 +20,6 @@ import qualified Salmon.StatMap as SM
 
 import Util.StatMap
 import Util.CSV
-import Config (Config)
 
 data Flag = CSV
           | Sum

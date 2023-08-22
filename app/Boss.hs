@@ -26,9 +26,6 @@ import Util.CSV
 import GHC.Natural (Natural)
 import Data.List (sort)
 
-import Config
-
-
 data Flag = CSV
           | Sum
           | Mean

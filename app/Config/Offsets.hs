@@ -8,20 +8,16 @@ import Data.Ini.Config
 
 import Textworthy
 import Salmon.Boss
-import qualified Data.Map as M
 
 import qualified Data.Vector as V
 
-import Data.Map (Map)
 import GHC.Natural (Natural)
 
 import Salmon.Round 
-import Salmon.Shift
 
 import qualified Salmon.StatMap as SM
 
 import Data.Time.Clock
-import Data.Time.Calendar.OrdinalDate
 
 
 offsetRound :: SM.StatMap Boss BossStats Natural -> Round

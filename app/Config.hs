@@ -4,9 +4,6 @@ module Config (
     Config(..),
     ) where
 
-import Data.Map
-import GHC.Natural
-
 import Data.Ini.Config
 
 import Salmon
