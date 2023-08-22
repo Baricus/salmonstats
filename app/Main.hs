@@ -13,8 +13,6 @@ import Salmon (readRoundsFromNXAPIdir, toIDMap, readShiftsFromNXAPIdir, toIDShif
 import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone)
 import Data.Time.Format (TimeLocale, defaultTimeLocale)
 
-import System.Info
-
 import qualified Filters
 
 import Boss 
@@ -44,13 +42,8 @@ commands = subparser
 
 
 getDefaultDataDir :: IO FilePath
-getDefaultDataDir = case os of
-                      "darwin"  -> pure $ "Library/Logs/" <> end -- I cannot test this, unfortunately
-                      "linux"   -> getXdgDirectory XdgData end
-                      "windows" -> getXdgDirectory XdgData end
-                      _         -> error unsupportedMsg
+getDefaultDataDir = getXdgDirectory XdgData end
     where end = "nxapi-nodejs/splatnet3"
-          unsupportedMsg = "Unrecognized OS prevented default data directory from being selected; please specify the data directory using --dir"
                 
 getConfigDirectory :: IO FilePath
 getConfigDirectory = getXdgDirectory XdgConfig "salmonstats"
