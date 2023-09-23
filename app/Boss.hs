@@ -40,7 +40,7 @@ data Data = BData
           Bool -- Should we sum up all bosses selected or not
                 deriving (Show)
 
-parseCommand :: Parser (RoundMap -> [Text])
+parseCommand :: Parser (Round -> RoundMap -> [Text])
 parseCommand = handle <$> parser
 
 parser :: Parser Data
@@ -64,17 +64,20 @@ parser = BData
 
 
 -- build output for each option
-handle :: Data -> RoundMap -> [Text]
-handle (BData selectedSet f shouldSum) m = 
+handle :: Data -> Round -> RoundMap -> [Text]
+handle (BData selectedSet f shouldSum) offset m = 
     let selectedSet'   = if S.null selectedSet then S.fromList [minBound..] else selectedSet -- empty = all bosses
         -- a map of only the bosses we want to display
         selectedBosses = M.map (SM.restrictKeys selectedSet' . bosses) m
+        -- the same map with offsets added in for easier computation (we won't ever print the key)
+        selectedBossesWOffset = M.insert "OFFSETROUND" ((SM.restrictKeys selectedSet' . bosses) offset) selectedBosses
 
      in if shouldSum 
      then case f of
              CSV    -> error "Cannot output totalled CSV" -- TODO: rule out in parser
              Sum    -> prettyPrintBossStats "TOTAL" 
-                . SM.statsFoldl' (+) 0 . statMapsSum $ selectedBosses
+                . SM.statsFoldl' (+) 0 . statMapsSum $ selectedBossesWOffset
+             -- these shouldn't use the offset as it throws the stats off
              Mean   -> prettyPrintBossStats @Double "TOTAL" . collapsedAvg $ selectedBosses
              Best   -> prettyPrintBossStats "TOTAL" 
                 . M.foldl' maxBossStats (BS 0 0 0) . fmap (SM.statsFoldl' (+) 0) $ selectedBosses
@@ -83,7 +86,7 @@ handle (BData selectedSet f shouldSum) m =
                 . M.foldl' (flip consBossStats) (BS [] [] []) . fmap (SM.statsFoldl' (+) 0) $ selectedBosses
      else case f of
              CSV    -> toCSV bHeader blinePieces 3 selectedSet' selectedBosses
-             Sum    -> prettyPrintBossMap . statMapsSum $ selectedBosses
+             Sum    -> prettyPrintBossMap . statMapsSum $ selectedBossesWOffset
              Mean   -> prettyPrintBossMap @Double . statMapsAvg $ selectedBosses
              Best   -> prettyPrintBossMap . statMapsMax $ selectedBosses
              Median -> prettyPrintBossMap @(Maybe Double) . statMapsMedian $ selectedBosses

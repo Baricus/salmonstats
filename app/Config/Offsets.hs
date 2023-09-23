@@ -44,10 +44,13 @@ offsetRound offsetMap = CR
     , prevHist      = Nothing
     }
 
-
+-- | Parses out a configuration section of boss offsets.  
+-- For every listed boss, we create a key with that many kills and spawns.
+-- I would add something for team kills too, but there's no way to know exactly how many there were since
+-- the point of this is that there's no known data.  
 offsetConfig :: IniParser Round
 offsetConfig = section "BOSS OFFSETS" $ do
-    offs <- traverse (\b -> (\o -> (b, BS o 0 0)) <$> fieldDefOf (toText b) number 0) [minBound @Boss .. maxBound]
+    offs <- traverse (\b -> (\o -> (b, BS o 0 o)) <$> fieldDefOf (toText b) number 0) [minBound @Boss .. maxBound]
     let offsetMap = SM.fromList offs
     pure $ offsetRound offsetMap
 

@@ -2,13 +2,13 @@ module Main where
 
 import qualified Data.Text.IO as T
 
-import qualified Data.Map as M
-
 import Options.Applicative
 
 import Data.Either (partitionEithers)
 
-import Salmon (readRoundsFromNXAPIdir, toIDMap, readShiftsFromNXAPIdir, toIDShiftMap, addShiftData, RoundMap)
+import Salmon.Round
+    ( readRoundsFromNXAPIdir, toIDMap, addShiftData, RoundMap, Round )
+import Salmon.Shift ( readShiftsFromNXAPIdir, toIDShiftMap )
 
 import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone)
 import Data.Time.Format (TimeLocale, defaultTimeLocale)
@@ -31,10 +31,10 @@ data Args = A
           { dataDir     :: FilePath
           , roundFilter :: RoundMap -> RoundMap
           , shouldIgnoreOffsets :: Bool
-          , tuiCommand  :: RoundMap -> [Text]
+          , tuiCommand  :: Round -> RoundMap -> [Text]
           }
 
-commands :: Parser (RoundMap -> [Text])
+commands :: Parser (Round -> RoundMap -> [Text])
 commands = subparser
         (  buildCommand "bosses" Boss.parseCommand "Prints out boss kills for requested bosses"
         <> buildCommand "kings"  King.parseCommand "Prints out stats for kings"
@@ -72,9 +72,10 @@ main = do
     configDir <- getConfigDirectory
     createDirectoryIfMissing True configDir
     let configPath = configDir </> "config"
+    -- TODO: this is an antipattern; catch the error properly and ignore it
     configExists <- doesFileExist configPath
-    Config {offsets=offsetR} <- if configExists
-                       then either error id . (flip parseIniFile configParser) <$> T.readFile configPath 
+    userConfig   <- if configExists
+                       then either error id . flip parseIniFile configParser <$> T.readFile configPath 
                        else pure defaultConfig
 
     -- get command line args
@@ -91,13 +92,11 @@ main = do
     (rErrors, rounds) <- fmap (addShiftData shifts . toIDMap) . partitionEithers <$> readRoundsFromNXAPIdir dir
     -- print any errors we find
     mapM_ print rErrors
-
-    -- add in offset round if needed
-    let rounds' = if shouldIgnoreOffsets 
-                     then rounds 
-                     else M.insert "OFFSETROUND" offsetR rounds 
+    
+    -- either use the default offsets or the zeroed default
+    let offsetToUse = if shouldIgnoreOffsets then offsets defaultConfig else offsets userConfig
 
     -- filter rounds
-    let filteredRounds = filt rounds'
+    let filteredRounds = filt rounds
     -- handle whatever command is given on the command line
-    mapM_ T.putStrLn $ execCommand filteredRounds
+    mapM_ T.putStrLn $ execCommand offsetToUse filteredRounds

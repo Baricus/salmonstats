@@ -28,7 +28,7 @@ calcMedian :: (Integral a, Ord a, Num b, Fractional b) => [a] -> Maybe b
 calcMedian [] = Nothing
 calcMedian l | odd (length l) = Just . fromIntegral $ l !! (length l `div` 2)
            | otherwise      = let index = length l `div` 2
-          in Just . (\e -> fromIntegral e / 2) $ foldl' (+) (0) 
+          in Just . (\e -> fromIntegral e / 2) $ foldl' (+) 0
                 [l !! index, l !! (index + 1)]
                 
 

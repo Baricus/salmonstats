@@ -29,7 +29,7 @@ data Flag = CSV
 data Data = KData (Set King) Flag
     deriving (Show)
 
-parseCommand :: Parser (RoundMap -> [Text])
+parseCommand :: Parser (Round -> RoundMap -> [Text])
 parseCommand = handle <$> parser
 
 parser :: Parser Data
@@ -43,15 +43,16 @@ parser = KData . S.fromList
         )
 
 -- currently, this just ignores the config
-handle :: Data -> RoundMap -> [Text]
-handle (KData selected flg) m =
+handle :: Data -> Round -> RoundMap -> [Text]
+handle (KData selected flg) offset m =
     let selectedSet'   = if S.null selected then S.fromList [minBound..] else selected -- empty = all kings
         -- a map of only the kings we want to display
         -- removing any null maps since most will be that and then we can skip them
         selectedKings  = M.filter (not . SM.null) . M.map (SM.restrictKeys selectedSet' . king) $ m
+        selectedKingsWOffset = M.insert "OFFSETROUND" ((SM.restrictKeys selectedSet' . king) offset) selectedKings
     in
         case flg of
-             Sum     -> prettyPrintKingMap . statMapsSum $ selectedKings
+             Sum     -> prettyPrintKingMap . statMapsSum $ selectedKingsWOffset
              WinRate -> prettyPrintWinRate . fmap (\l -> fromIntegral (sum l) / fromIntegral (length l)) . SM.toMap killed . SM.toStatsList $ selectedKings 
              CSV     -> toCSV kHeader linePieces 4 selectedSet' selectedKings
 
