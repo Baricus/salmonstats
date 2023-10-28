@@ -13,11 +13,14 @@ import Salmon.Shift ( readShiftsFromNXAPIdir, toIDShiftMap )
 import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone)
 import Data.Time.Format (TimeLocale, defaultTimeLocale)
 
+import Data.Text (Text)
+
 import qualified Filters
 
 import Boss 
 import King 
-import Data.Text (Text)
+import Game
+
 import Command (buildCommand)
 
 import System.FilePath
@@ -38,6 +41,7 @@ commands :: Parser (Round -> RoundMap -> [Text])
 commands = subparser
         (  buildCommand "bosses" Boss.parseCommand "Prints out boss kills for requested bosses"
         <> buildCommand "kings"  King.parseCommand "Prints out stats for kings"
+        <> buildCommand "game"   Game.parseCommand "Prints out game statistics"
         )
 
 

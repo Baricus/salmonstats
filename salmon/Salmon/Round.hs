@@ -12,6 +12,9 @@ module Salmon.Round (
     addShiftData,
     -- Helper functions for working with Rounds
     isTeammate,
+    -- Helper functions for working with Game Results
+    isWin, isLoss, isDisconnect, isUnknown,
+    getWave,
     ) where
 
 import Salmon.NintendoJSON
@@ -53,7 +56,7 @@ data GameResult
          | Loss Natural -- final wave number
          | Disconnect
          | Unknown
-    deriving (Show, Generic)
+    deriving (Show, Generic, Eq)
 
 instance ToJSON GameResult where
     toEncoding = genericToEncoding defaultOptions
@@ -187,3 +190,25 @@ addShiftData = M.merge M.dropMissing M.preserveMissing' $ M.zipWithMatched (\_ s
 -- helper/util functions
 isTeammate :: Text -> Round -> Bool
 isTeammate name = V.elem name . team
+
+
+isWin :: GameResult -> Bool
+isWin Won = True
+isWin _   = False
+
+isLoss :: GameResult -> Bool
+isLoss (Loss _) = True
+isLoss _        = False
+
+isDisconnect :: GameResult -> Bool
+isDisconnect Disconnect = True
+isDisconnect _          = False
+
+isUnknown :: GameResult -> Bool
+isUnknown Unknown = True
+isUnknown _       = False
+
+getWave :: GameResult -> Maybe Natural
+getWave Won      = Just 3
+getWave (Loss n) = Just n
+getWave _        = Nothing
