@@ -22,7 +22,7 @@ import Data.Time
       localTimeToUTC ) 
 
  -- Predicates that we can filter on
-data Pred = Player Text
+data Pred = PlayerName Text
           | Stage Text
           | TimeBefore UTCTime
           | TimeAfter UTCTime
@@ -69,9 +69,9 @@ opts UTCTime{utctDay=day} zone local =
                 )
                 -- we can have many of these options
                 (many . asum $
-                    [ Player <$> strOption 
+                    [ PlayerName <$> strOption 
                                (long "player" <> short 'p' <> metavar "PLAYER" <> help "Filter matches to ones with PLAYER as a teammate")
-                    , Negate . Player <$> strOption
+                    , Negate . PlayerName <$> strOption
                                (long "not-player" <> metavar "PLAYER" <> help "Filter matches to ones without PLAYER as a teammate")
                     , Stage <$> strOption
                                (long "stage" <> short 's' <> metavar "STAGE" <> help "Filter matches to ones on STAGE")
@@ -125,7 +125,7 @@ buildAndfilter = foldr (And . P) (P Any)
 -- Requires a list of gameIDs to for things like Last
 fromPred  :: Pred -> (Round -> Bool)
 fromPred = \cases
-    (Player name)          -> (isTeammate name)
+    (PlayerName name)          -> (isTeammate name)
     (Stage  name)          -> ((== name) . stage)
     (TimeBefore t)         -> ((< t) . time)
     (TimeAfter t)          -> ((> t) . time)

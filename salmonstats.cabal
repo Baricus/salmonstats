@@ -36,7 +36,8 @@ common shared
                       vector >= 0.13.0 && < 0.14,
                       time >= 1.12.2 && < 1.13,
                       config-ini >= 0.2.6 && < 0.3,
-                      directory >= 1.3.8 && < 1.4
+                      directory >= 1.3.8 && < 1.4,
+					  base64,
 
     default-extensions: LambdaCase, OverloadedStrings
     ghc-options: -Wall -funbox-small-strict-fields -O2
@@ -46,7 +47,7 @@ library salmonrun
   import: shared
 
   hs-source-dirs: salmon
-  exposed-modules: Salmon, Salmon.NintendoJSON, Salmon.Boss, Salmon.WaterLevel, Salmon.Wave, Salmon.Round, Salmon.Shift, Salmon.King, Salmon.StatMap, Textworthy
+  exposed-modules: Salmon, Salmon.NintendoJSON, Salmon.Boss, Salmon.WaterLevel, Salmon.Wave, Salmon.Round, Salmon.Shift, Salmon.King, Salmon.StatMap, Salmon.Player, Textworthy
 
   other-modules: 
 
@@ -56,7 +57,7 @@ executable salmonstats
     main-is: Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules: Boss, Filters, King, Util.StatMap, Util.CSV, Command, Config.Offsets, Config, Game
+    other-modules: Boss, Filters, King, Util.StatMap, Util.CSV, Command, Config.Offsets, Config, Game, Player
 
     -- LANGUAGE extensions used by modules in this package.
     build-depends:    salmonrun, optparse-applicative >= 0.18.1 && < 0.19

@@ -21,6 +21,7 @@ data Flag = Total
           | LossRate
           | DisconnectRate
           | AvgWave
+          deriving (Show, Eq, Ord, Bounded, Enum)
 
 
 parseCommand :: Parser (Round -> RoundMap -> [Text])

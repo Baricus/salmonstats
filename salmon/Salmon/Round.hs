@@ -15,6 +15,8 @@ module Salmon.Round (
     -- Helper functions for working with Game Results
     isWin, isLoss, isDisconnect, isUnknown,
     getWave,
+    -- Helper functions for working on round maps
+    canonicalizePlayers,
     ) where
 
 import Salmon.NintendoJSON
@@ -30,6 +32,9 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 
+import Data.Set (Set)
+import qualified Data.Set as S
+
 import Data.Map (Map)
 import qualified Data.Map as M
 import qualified Data.Map.Merge.Strict as M
@@ -37,7 +42,7 @@ import qualified Data.Map.Merge.Strict as M
 import GHC.Generics ( Generic )
 import GHC.Natural ( Natural ) 
 
-import Control.Applicative ( Alternative((<|>)), liftA) 
+import Control.Applicative ( Alternative((<|>)) ) 
 
 import Data.Time ( UTCTime )
 
@@ -48,6 +53,8 @@ import System.Directory ( listDirectory )
 import Data.List (isPrefixOf, sortOn)
 
 import Salmon.Shift ( Shift, GameID ) 
+import Salmon.Player
+import GHC.Base (join)
 
 type RoundMap = Map GameID Round
 
@@ -71,8 +78,8 @@ data Round = CR
                  , shift         :: Maybe Shift
                  , result        :: GameResult
                  , hazard        :: Double
-                 , player        :: Text
-                 , team          :: Vector Text -- TODO: decide if this should be more info or not
+                 , player        :: Player
+                 , team          :: Set Player
                  , playedWeapons :: Vector Text
                  , allWeapons    :: Vector Text
                  , special       :: Maybe Text
@@ -124,9 +131,9 @@ instance FromNintendoJSON Round where
                                         | otherwise -> Loss . fromIntegral $ i) <$> res .: "resultWave"
         
         hazard     <- res .: "dangerRate"
-        username   <- myRes .: "player" >>= getName
+        username   <- myRes .: "player" >>= parseNJSON
         team       <- res .: "memberResults" >>= withArray "MemberResults" 
-                                (traverse (withObject "MemberRes" (\o -> (o .: "player") >>= getName)))
+                                (traverse (withObject "MemberRes" (\o -> (o .: "player") >>= parseNJSON)))
 
         pWeapons   <- myRes .: "weapons" >>= withArray "my weapons" (traverse (withObject "weapon" getName))
         aWeapons   <- res .: "weapons" >>= withArray "weapons" (traverse (withObject "weapon" getName))
@@ -152,7 +159,7 @@ instance FromNintendoJSON Round where
                     (pure M.empty) :: Parser (Map Boss (BossStats Natural))
 
         -- we either parse the king or just give nothing back since it wasn't present
-        king <- ((liftA (uncurry M.singleton) (parseNJSON (Object res))) <|> pure M.empty)
+        king <- fmap (uncurry M.singleton) (parseNJSON (Object res)) <|> pure M.empty
 
         next <- res .:? "nextHistoryDetail" >>= traverse (.: "id")
         prev <- res .:? "previousHistoryDetail" >>= traverse (.: "id")
@@ -160,7 +167,7 @@ instance FromNintendoJSON Round where
         -- man, this is an object       
         pure $ CR gameID time stage Nothing -- shift data is grabbed from other files and combined
                   gameResult hazard 
-                  username team 
+                  username (S.fromList . V.toList $ team)
                   pWeapons aWeapons special 
                   eggs eggAssists 
                   rescues deaths 
@@ -189,8 +196,7 @@ addShiftData = M.merge M.dropMissing M.preserveMissing' $ M.zipWithMatched (\_ s
 
 -- helper/util functions
 isTeammate :: Text -> Round -> Bool
-isTeammate name = V.elem name . team
-
+isTeammate name = S.member name . S.unions . fmap names . S.elems . team
 
 isWin :: GameResult -> Bool
 isWin Won = True
@@ -212,3 +218,29 @@ getWave :: GameResult -> Maybe Natural
 getWave Won      = Just 3
 getWave (Loss n) = Just n
 getWave _        = Nothing
+
+getAllPlayers :: RoundMap -> Map Text Player
+getAllPlayers rMap = let rounds = M.elems rMap 
+                         teamPlayers = join . fmap (S.elems . team) $ rounds
+                         statPlayers = player <$> rounds
+                         allPlayers  = teamPlayers <> statPlayers
+                         in collapsePlayers allPlayers
+
+-- | Returns a player from the (assumed total) map of players via its ID
+-- The map contains players with their proper names
+getPlayer :: Map Text a -> Player -> a
+getPlayer pMap (Player _ pId) = let fullPlayer = M.lookup pId pMap
+                               in case fullPlayer of
+                                       (Just newPlayer) -> newPlayer
+                                       (Nothing)        -> error "player not found"
+
+givePlayerFullNames :: Functor f => Map Text Player -> f Round -> f Round
+givePlayerFullNames pMap = fmap (\r@(CR {player=p}) -> r {player = getPlayer pMap p} )
+
+giveTeamFullNames :: Functor f => Map Text Player -> f Round -> f Round
+giveTeamFullNames pMap = fmap (\r@(CR {team=t}) -> r {team=swapTeam t})
+    where swapTeam = S.fromList . fmap (getPlayer pMap) . S.toList
+
+canonicalizePlayers :: RoundMap -> RoundMap
+canonicalizePlayers rm = let pMap = getAllPlayers rm
+                             in giveTeamFullNames pMap . givePlayerFullNames pMap $ rm

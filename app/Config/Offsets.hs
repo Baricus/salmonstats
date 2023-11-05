@@ -8,8 +8,10 @@ import Data.Ini.Config
 
 import Textworthy
 import Salmon.Boss
+import Salmon.Player
 
 import qualified Data.Vector as V
+import qualified Data.Set as S
 
 import GHC.Natural (Natural)
 
@@ -28,8 +30,8 @@ offsetRound offsetMap = CR
     , shift         = Nothing
     , result        = Unknown
     , hazard        = 0
-    , player        = "OFFSETS"
-    , team          = V.empty
+    , player        = Player (S.singleton "OFFSETS") "OFFSETS"
+    , team          = S.empty
     , playedWeapons = V.empty
     , allWeapons    = V.empty
     , special       = Nothing

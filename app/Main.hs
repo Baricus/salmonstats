@@ -7,7 +7,6 @@ import Options.Applicative
 import Data.Either (partitionEithers)
 
 import Salmon.Round
-    ( readRoundsFromNXAPIdir, toIDMap, addShiftData, RoundMap, Round )
 import Salmon.Shift ( readShiftsFromNXAPIdir, toIDShiftMap )
 
 import Data.Time (UTCTime, TimeZone, getCurrentTime, getCurrentTimeZone)
@@ -20,6 +19,7 @@ import qualified Filters
 import Boss 
 import King 
 import Game
+import Player
 
 import Command (buildCommand)
 
@@ -42,15 +42,8 @@ commands = subparser
         (  buildCommand "bosses" Boss.parseCommand "Prints out boss kills for requested bosses"
         <> buildCommand "kings"  King.parseCommand "Prints out stats for kings"
         <> buildCommand "game"   Game.parseCommand "Prints out game statistics"
-        )
-
-
-getDefaultDataDir :: IO FilePath
-getDefaultDataDir = getXdgDirectory XdgData end
-    where end = "nxapi-nodejs/splatnet3"
-                
-getConfigDirectory :: IO FilePath
-getConfigDirectory = getXdgDirectory XdgConfig "salmonstats"
+        <> buildCommand "players" Player.parseCommand "Prints out information about people you played with"
+        ) 
 
 argParser :: FilePath -> UTCTime -> TimeZone -> TimeLocale -> ParserInfo Args
 argParser defaultDataDir time zone local = info (helper <*>
@@ -61,6 +54,12 @@ argParser defaultDataDir time zone local = info (helper <*>
                     <*> commands))
                  (fullDesc <> progDesc "Outputs various salmon run stats")
 
+getDefaultDataDir :: IO FilePath
+getDefaultDataDir = getXdgDirectory XdgData end
+    where end = "nxapi-nodejs/splatnet3"
+                
+getConfigDirectory :: IO FilePath
+getConfigDirectory = getXdgDirectory XdgConfig "salmonstats"
 
 -- format notes:
 -- Args should have general options like a list of filters (dates, players, etc) 
@@ -96,11 +95,15 @@ main = do
     (rErrors, rounds) <- fmap (addShiftData shifts . toIDMap) . partitionEithers <$> readRoundsFromNXAPIdir dir
     -- print any errors we find
     mapM_ print rErrors
-    
+
+    -- combine players properly
+    let roundsWithFullPlayers = canonicalizePlayers rounds
+
     -- either use the default offsets or the zeroed default
     let offsetToUse = if shouldIgnoreOffsets then offsets defaultConfig else offsets userConfig
 
     -- filter rounds
-    let filteredRounds = filt rounds
+    let filteredRounds = filt roundsWithFullPlayers
+
     -- handle whatever command is given on the command line
     mapM_ T.putStrLn $ execCommand offsetToUse filteredRounds

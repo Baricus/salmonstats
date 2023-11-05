@@ -1,5 +1,6 @@
 module Salmon (
     module Salmon.Round,
+    module Salmon.Player,
     module Salmon.Shift,
     module Salmon.Wave,
     module Salmon.Boss,
@@ -10,6 +11,7 @@ module Salmon (
     ) where
 
 import Salmon.Round
+import Salmon.Player
 import Salmon.Shift
 import Salmon.Wave
 import Salmon.Boss
