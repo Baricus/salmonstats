@@ -196,7 +196,7 @@ addShiftData = M.merge M.dropMissing M.preserveMissing' $ M.zipWithMatched (\_ s
 
 -- helper/util functions
 isTeammate :: Text -> Round -> Bool
-isTeammate name = S.member name . S.unions . fmap names . S.elems . team
+isTeammate nameOrNinId = any (isPlayer nameOrNinId) . team
 
 isWin :: GameResult -> Bool
 isWin Won = True

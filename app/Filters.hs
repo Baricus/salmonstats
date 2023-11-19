@@ -58,19 +58,19 @@ opts UTCTime{utctDay=day} zone local =
             -- we combine the two kinds of options with <>
             liftA2 (<>)
                 -- We can only have one of these options
-                (liftA catMaybes . sequenceA . fmap optional $
+                (fmap catMaybes . traverse optional $
                     [ flag FilterPrivateLobbies Any 
                            (long "include-private" <> help "Include private battles in computed statistics")
-                    , option (TimeBefore <$> maybeReader (parseTime))
+                    , option (TimeBefore <$> maybeReader parseTime)
                            (long "before" <> short 'b' <> metavar timeFMT <> help "Filter matches after this time")
-                    , option (TimeAfter <$> maybeReader (parseTime))
+                    , option (TimeAfter <$> maybeReader parseTime)
                            (long "after" <> short 'a' <> metavar timeFMT <> help "Filter matches before this time")
                     ]
                 )
                 -- we can have many of these options
                 (many . asum $
                     [ PlayerName <$> strOption 
-                               (long "player" <> short 'p' <> metavar "PLAYER" <> help "Filter matches to ones with PLAYER as a teammate")
+                               (long "player" <> short 'p' <> metavar "PLAYER" <> help "Filter matches to ones with PLAYER as a teammate; can be ID or any username used")
                     , Negate . PlayerName <$> strOption
                                (long "not-player" <> metavar "PLAYER" <> help "Filter matches to ones without PLAYER as a teammate")
                     , Stage <$> strOption
@@ -78,7 +78,7 @@ opts UTCTime{utctDay=day} zone local =
                     ]
                 ))
         -- then the modifiers
-        ( liftA catMaybes . sequenceA . fmap optional $
+        ( fmap catMaybes . traverse optional $
             [ option (Last <$> auto)
                  (long "last" <> short 'l' <> metavar "MATCHES" <> help "Filter for the last MATCHES matches played")
             ]
@@ -129,11 +129,11 @@ fromPred = \cases
     (Stage  name)          -> ((== name) . stage)
     (TimeBefore t)         -> ((< t) . time)
     (TimeAfter t)          -> ((> t) . time)
-    (FilterPrivateLobbies) -> \r -> maybe True
+    (FilterPrivateLobbies) -> maybe True
                                         (\cases
                                             (PrivateScenario _) -> False
                                             _                   -> True)
-                                        (shift r)
+                                . shift
     Any                    -> const True
     (Negate p)             -> not <$> fromPred p
 

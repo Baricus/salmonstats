@@ -3,6 +3,7 @@ module Salmon.Player
         Player (..),
         printPlayer,
         collapsePlayers,
+        isPlayer,
     ) where
 
 import Data.Text (Text)
@@ -52,6 +53,18 @@ instance FromNintendoJSON Player where
         npln <- getNIdEndSegment <$> o .: "id"
 
         pure $ Player username npln
+
+isPlayerName :: Player -> Text -> Bool
+isPlayerName (Player names _) = flip S.member names
+
+isPlayerID :: Player -> Text -> Bool
+isPlayerID (Player _ nId) = (== nId)
+
+-- | Returns true if a player has the given ID or name
+--
+-- NOTE: This may eventually change if we treat IDs as a unique type
+isPlayer :: Text -> Player -> Bool
+isPlayer t = liftA2 (||) (`isPlayerName` t) (`isPlayerID` t)
 
 printPlayer :: Player -> Text
 printPlayer (Player names pId) = pId <> ": " <> (T.intercalate ", " . S.toList $ names)
