@@ -67,7 +67,7 @@ isPlayer :: Text -> Player -> Bool
 isPlayer t = liftA2 (||) (`isPlayerName` t) (`isPlayerID` t)
 
 printPlayer :: Player -> Text
-printPlayer (Player names pId) = pId <> ": " <> (T.intercalate ", " . S.toList $ names)
+printPlayer (Player names pId) = pId <> "\t" <> (T.intercalate "\t" . S.toList $ names)
 
 collapsePlayers :: Foldable f => f Player -> Map Text Player
 collapsePlayers = foldl' collapsePlayer M.empty
